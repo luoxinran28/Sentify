@@ -6,7 +6,8 @@ import {
   Typography,
   Box,
   Snackbar,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { analyzeComments } from '../services/api';
 import AnalysisResults from './AnalysisResults';
@@ -32,10 +33,13 @@ function CommentAnalyzer() {
     }
 
     setLoading(true);
+    setResults(null);
+    
     try {
       const data = await analyzeComments(comments);
       setResults(data);
     } catch (error) {
+      console.error('分析错误:', error);
       setSnackbar({
         open: true,
         message: error.message || '分析失败',
@@ -47,17 +51,18 @@ function CommentAnalyzer() {
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   return (
     <Container maxWidth="md">
       <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" gutterBottom>
           客户评论分析器
         </Typography>
         
         <TextField
+          aria-label="评论输入框"
           multiline
           rows={6}
           value={comments}
@@ -65,27 +70,39 @@ function CommentAnalyzer() {
           placeholder="在此粘贴客户评论..."
           variant="outlined"
           fullWidth
+          disabled={loading}
         />
         
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={loading}
-          sx={{ alignSelf: 'flex-start' }}
-        >
-          {loading ? '分析中...' : '分析评论'}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Button
+            aria-label="分析评论"
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={loading}
+            startIcon={loading && <CircularProgress size={20} color="inherit" />}
+          >
+            {loading ? '分析中...' : '分析评论'}
+          </Button>
+          
+          {loading && (
+            <Typography variant="body2" color="text.secondary">
+              正在使用 DeepSeek 分析评论...
+            </Typography>
+          )}
+        </Box>
 
         {results && <AnalysisResults results={results} />}
 
         <Snackbar
           open={snackbar.open}
-          autoHideDuration={3000}
+          autoHideDuration={5000}
           onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
           <Alert 
             onClose={handleCloseSnackbar} 
             severity={snackbar.severity}
+            variant="filled"
             sx={{ width: '100%' }}
           >
             {snackbar.message}

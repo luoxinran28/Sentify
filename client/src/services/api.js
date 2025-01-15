@@ -7,6 +7,7 @@ export const analyzeComments = async (comments) => {
     const response = await axios.post(`${API_URL}/comments/analyze`, { comments });
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.error || '分析请求失败');
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
   }
 }; 

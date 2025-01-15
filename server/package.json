@@ -9,8 +9,8 @@
   "dependencies": {
     "express": "^4.17.1",
     "cors": "^2.8.5",
-    "sentiment": "^5.0.2",
-    "dotenv": "^10.0.0"
+    "dotenv": "^10.0.0",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"
