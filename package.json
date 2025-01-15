@@ -1,0 +1,22 @@
+{
+  "name": "sentify",
+  "version": "1.0.0",
+  "description": "客户评论分析系统",
+  "scripts": {
+    "install-all": "npm install && npm run install-client && npm run install-server",
+    "install-client": "cd client && npm install",
+    "install-server": "cd server && npm install",
+    "client": "cd client && npm start",
+    "server": "cd server && npm start",
+    "dev": "concurrently --kill-others-on-fail \"npm run server\" \"npm run client\"",
+    "start": "npm run dev",
+    "stop": "kill-port 3010 5010",
+    "stop:client": "kill-port 3010",
+    "stop:server": "kill-port 5010",
+    "restart": "npm run stop || true && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^6.2.0",
+    "kill-port": "^2.0.1"
+  }
+} 
