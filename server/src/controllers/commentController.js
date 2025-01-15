@@ -11,7 +11,6 @@ exports.analyzeComments = async (req, res) => {
     console.log('收到评论:', comments);
     const commentArray = comments.split('\n').filter(comment => comment.trim());
     
-    // 使用 DeepSeek 进行分析
     try {
       const analysis = await analyzeWithDeepSeek(comments);
       console.log('DeepSeek 分析结果:', analysis);
