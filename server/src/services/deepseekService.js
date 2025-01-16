@@ -4,7 +4,6 @@ const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 exports.analyzeWithDeepSeek = async (text) => {
   try {
-    console.log('开始调用 DeepSeek API...');
     const response = await axios.post(
       DEEPSEEK_API_URL,
       {
@@ -12,34 +11,47 @@ exports.analyzeWithDeepSeek = async (text) => {
         messages: [
           {
             role: "system",
-            content: `你是一个专业的情感分析助手。请分析以下评论并返回JSON格式结果，包含以下字段：
-- sentiment: 整体情感(positive/negative/neutral)
-- score: 情感得分(0.0-1.0)
-- keywords: 关键词数组
-- themes: 主题数组，每个主题包含theme(主题名称)、count(出现次数)、sentiment(主题情感倾向)
-- summary: 整体分析总结
+            content: `作为专业的评论分析助手，请对评论进行分析并返回JSON格式结果。要求：
 
-示例格式：
+1. 分析整体情感倾向（positive/negative/neutral）和情感强度（0-1）
+2. 提供准确的中文翻译
+3. 标注原文中的情感表达词组，并提供对应的中文翻译
+4. 提取关键主题和观点
+
+返回格式示例：
 {
   "sentiment": "positive",
   "score": 0.8,
-  "keywords": ["优质", "服务好", "价格合理"],
+  "translation": "产品质量很好，但价格太贵了",
+  "highlights": {
+    "positive": ["excellent quality"],
+    "negative": ["too expensive"]
+  },
+  "translatedHighlights": {
+    "positive": ["质量很好"],
+    "negative": ["太贵"]
+  },
+  "keywords": ["quality", "price"],
   "themes": [
     {
-      "theme": "服务质量",
-      "count": 2,
+      "theme": "产品质量",
+      "count": 1,
       "sentiment": "positive"
     }
-  ],
-  "summary": "整体评价积极，主要赞扬服务质量..."
-}`
+  ]
+}
+
+注意：
+1. translatedHighlights 中的词组必须与 translation 中的文本完全匹配
+2. highlights 与 translatedHighlights 必须一一对应
+3. 翻译要准确自然，符合中文表达习惯`
           },
           {
             role: "user",
             content: text
           }
         ],
-        temperature: 0.3,
+        temperature: 0.1,
         response_format: { type: "json_object" }
       },
       {
@@ -50,18 +62,18 @@ exports.analyzeWithDeepSeek = async (text) => {
       }
     );
 
-    console.log('DeepSeek API 响应:', response.data.choices[0].message);
-
     const result = JSON.parse(response.data.choices[0].message.content);
-    console.log('解析后的结果:', result);
     
+    // 确保返回结果包含所有必要字段
+    if (!result.translatedHighlights) {
+      result.translatedHighlights = {
+        positive: [],
+        negative: []
+      };
+    }
+
     return result;
   } catch (error) {
-    console.error('DeepSeek API 错误详情:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
-    throw new Error(`DeepSeek API 调用失败: ${error.message}`);
+    throw new Error(`评论分析失败: ${error.message}`);
   }
 }; 

@@ -4,28 +4,47 @@ exports.analyzeComments = async (req, res) => {
   try {
     const { comments } = req.body;
     
-    if (!comments || !comments.trim()) {
+    if (!Array.isArray(comments) || comments.length === 0) {
       return res.status(400).json({ error: '评论内容不能为空' });
     }
 
     console.log('收到评论:', comments);
-    const commentArray = comments.split('\n').filter(comment => comment.trim());
     
     try {
-      const analysis = await analyzeWithDeepSeek(comments);
-      console.log('DeepSeek 分析结果:', analysis);
+      // 分析每条评论
+      const analysisPromises = comments.map(comment => analyzeWithDeepSeek(comment));
+      const analysisResults = await Promise.all(analysisPromises);
       
+      console.log('DeepSeek 分析结果:', analysisResults);
+      
+      // 计算整体情感分布
+      const sentimentDistribution = analysisResults.reduce((acc, curr) => {
+        acc[curr.sentiment]++;
+        return acc;
+      }, { positive: 0, neutral: 0, negative: 0 });
+
+      // 汇总所有主题
+      const themesMap = new Map();
+      analysisResults.forEach(result => {
+        result.themes.forEach(theme => {
+          const existing = themesMap.get(theme.theme) || { count: 0, positive: 0, negative: 0, neutral: 0 };
+          existing.count += theme.count;
+          existing[theme.sentiment]++;
+          themesMap.set(theme.theme, existing);
+        });
+      });
+
       const results = {
-        totalComments: commentArray.length,
-        sentimentDistribution: {
-          positive: analysis.sentiment === 'positive' ? 1 : 0,
-          neutral: analysis.sentiment === 'neutral' ? 1 : 0,
-          negative: analysis.sentiment === 'negative' ? 1 : 0
-        },
-        keywords: analysis.keywords || [],
-        themes: analysis.themes || [],
-        averageSentiment: analysis.score || 0,
-        summary: analysis.summary || ''
+        totalComments: comments.length,
+        sentimentDistribution,
+        averageSentiment: (analysisResults.reduce((sum, curr) => sum + curr.score, 0) / comments.length).toFixed(2),
+        themes: Array.from(themesMap.entries()).map(([theme, stats]) => ({
+          theme,
+          count: stats.count,
+          sentiment: stats.positive > stats.negative ? 'positive' : 
+                    stats.negative > stats.positive ? 'negative' : 'neutral'
+        })),
+        individualResults: analysisResults
       };
 
       res.json(results);
