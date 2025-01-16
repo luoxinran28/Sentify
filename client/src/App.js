@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import CommentAnalyzer from './components/CommentAnalyzer';
 import AuthPage from './components/AuthPage';
-import { checkAuthStatus, clearAuthStatus } from './utils/auth';
+import { checkAuthStatus, clearAuthStatus, setAuthStatus } from './utils/auth';
 
 const theme = createTheme({
   palette: {
@@ -28,33 +28,37 @@ const theme = createTheme({
 });
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // 初始化时检查认证状态
+    return checkAuthStatus();
+  });
 
   useEffect(() => {
-    // 检查认证状态
-    const authStatus = checkAuthStatus();
-    setIsAuthenticated(authStatus);
+    // 定期检查会话状态
+    const checkInterval = setInterval(() => {
+      const isValid = checkAuthStatus();
+      setIsAuthenticated(isValid);
+    }, 60000); // 每分钟检查一次
 
-    // 添加页面可见性变化监听
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // 页面隐藏时清除认证状态
-        clearAuthStatus();
-        setIsAuthenticated(false);
+    // 添加存储事件监听，用于多标签页同步
+    const handleStorageChange = (e) => {
+      if (e.key === 'auth_status' || e.key === 'auth_timestamp') {
+        const isValid = checkAuthStatus();
+        setIsAuthenticated(isValid);
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('storage', handleStorageChange);
 
-    // 清理函数
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(checkInterval);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
   const handleAuthSuccess = () => {
+    setAuthStatus();
     setIsAuthenticated(true);
-    localStorage.setItem('auth_status', 'verified');
   };
 
   return (
