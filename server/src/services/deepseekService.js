@@ -43,6 +43,14 @@ exports.analyzeWithDeepSeek = async (comments) => {
 
     return result;
   } catch (error) {
+    if (error.response) {
+      console.error('DeepSeek API 错误响应:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+    } else if (error.request) {
+      console.error('DeepSeek API 请求失败:', error.message);
+    }
     throw new Error(`评论分析失败: ${error.message}`);
   }
 }; 
