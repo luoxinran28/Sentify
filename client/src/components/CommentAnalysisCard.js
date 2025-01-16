@@ -19,7 +19,7 @@ import {
 const createHighlightedText = (text, highlights, options = {}) => {
   const {
     showTranslation = false,
-    translatedWord = null,
+    getTranslatedWord = null,
     indented = false
   } = options;
 
@@ -51,7 +51,10 @@ const createHighlightedText = (text, highlights, options = {}) => {
       );
     }
 
-    const tooltipTitle = showTranslation && translatedWord
+    const translatedWord = showTranslation && getTranslatedWord ? 
+      getTranslatedWord(highlight) : null;
+
+    const tooltipTitle = translatedWord
       ? `${highlight.type === 'positive' ? '积极表达' : '消极表达'}: ${translatedWord}`
       : highlight.type === 'positive' ? '积极表达' : '消极表达';
 
@@ -89,15 +92,18 @@ const createHighlightedText = (text, highlights, options = {}) => {
   return <Typography sx={indented ? { pl: 3 } : undefined}>{parts}</Typography>;
 };
 
-const HighlightedText = ({ text, highlights, translatedHighlights }) => (
-  createHighlightedText(text, highlights, {
+const HighlightedText = ({ text, highlights, translatedHighlights }) => {
+  const getTranslatedWord = (highlight) => {
+    if (!translatedHighlights || !translatedHighlights[highlight.type]) return null;
+    const index = highlights[highlight.type].indexOf(highlight.word);
+    return translatedHighlights[highlight.type][index];
+  };
+
+  return createHighlightedText(text, highlights, {
     showTranslation: true,
-    translatedWord: (highlight) => 
-      translatedHighlights?.[highlight.type]?.[
-        highlights[highlight.type].indexOf(highlight.word)
-      ]
-  })
-);
+    getTranslatedWord
+  });
+};
 
 const TranslatedHighlightedText = ({ text, highlights }) => (
   createHighlightedText(text, highlights, { indented: true })
