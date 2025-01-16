@@ -5,6 +5,15 @@ const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 exports.analyzeWithDeepSeek = async (comments) => {
   try {
+    // 创建取消令牌
+    const CancelToken = axios.CancelToken;
+    const source = CancelToken.source();
+
+    // 设置超时定时器
+    const timeout = setTimeout(() => {
+      source.cancel('请求超时');
+    }, 50000); // 50秒超时
+
     const response = await axios.post(
       DEEPSEEK_API_URL,
       {
@@ -26,13 +35,17 @@ exports.analyzeWithDeepSeek = async (comments) => {
         headers: {
           'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 50000, // 50秒超时
+        cancelToken: source.token
       }
     );
 
+    // 清除超时定时器
+    clearTimeout(timeout);
+
     const result = JSON.parse(response.data.choices[0].message.content);
     
-    // 确保返回结果包含所有必要字段
     result.analyses = result.analyses.map(analysis => ({
       ...analysis,
       translatedHighlights: analysis.translatedHighlights || {
@@ -43,6 +56,10 @@ exports.analyzeWithDeepSeek = async (comments) => {
 
     return result;
   } catch (error) {
+    if (axios.isCancel(error)) {
+      throw new Error('请求超时，请稍后重试');
+    }
+    
     if (error.response) {
       console.error('DeepSeek API 错误响应:', {
         status: error.response.status,
