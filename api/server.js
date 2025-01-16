@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { analyzeComments } = require('../server/src/controllers/commentController');
+const { verifyAccessCode } = require('../server/src/controllers/authController');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../server/.env') });
 
@@ -19,6 +20,10 @@ app.use((err, req, res, next) => {
   });
 });
 
+// 添加验证路由
+app.post('/api/auth/verify', verifyAccessCode);
+
+// 评论分析路由
 app.post('/api/comments/analyze', async (req, res, next) => {
   try {
     const result = await analyzeComments(req, res);
