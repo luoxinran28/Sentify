@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const commentRoutes = require('./routes/commentRoutes');
 const authRoutes = require('./routes/authRoutes');
-const initDatabase = require('./services/initDatabaseService');
+const { initDatabase } = require('./services/initDatabaseService');
 require('dotenv').config();
 
 const app = express();

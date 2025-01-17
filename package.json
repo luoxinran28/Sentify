@@ -13,7 +13,8 @@
     "start": "node api/server.js",
     "stop": "kill-port 3000 5010",
     "re-dev": "npm run stop || true && npm run dev",
-    "clean": "rm -rf node_modules client/node_modules server/node_modules"
+    "clean": "rm -rf node_modules client/node_modules server/node_modules",
+    "debug": "concurrently \"cd server && npm run debug\" \"cd client && npm start\""
   },
   "dependencies": {
     "express": "^4.17.1",
