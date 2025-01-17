@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Container,
-  TextField,
-  Button,
-  Typography,
   Box,
+  Button,
+  TextField,
+  IconButton,
+  Typography,
+  Paper,
   Snackbar,
   Alert,
   CircularProgress,
-  IconButton,
-  Paper
+  Input
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Remove as RemoveIcon
-} from '@mui/icons-material';
-import { analyzeComments } from '../services/api';
+import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import Header from './Header';
 import AnalysisResults from './AnalysisResults';
+import { analyzeComments } from '../services/api';
+import * as XLSX from 'xlsx';
 
 const EXAMPLE_COMMENTS = [
   `I ordered this case for when I do not want to carry a purse. The case itself is very nice, I was expecting it to feel cheap but that’s not the case at all! It fit my ID and 2 cards very well. They are a little tight in there but that makes it feel very secure. I am sure they will lose a bit as I use it. The magnets holding it together seem to be very strong and I have no worries of it coming undone. Overall very satisfied 🙌🏼`,
@@ -24,7 +24,7 @@ const EXAMPLE_COMMENTS = [
   `Honestly the Case seems to be built very well as far as the seams and durability but I will note, it’s very bulky and only holds maybe 3/4 cards, I feel as though the pockets themselves need revised the license pocket doesn’t fully fit the license it needs to be longer or possibly switched to the opposite side, but if you’re a minimalist and don’t mind taking your id out anytime you need info off of it then this case is actually pretty good but would definitely be a 5 star if it was revised a little`
 ];
 
-function CommentAnalyzer() {
+function CommentAnalyzer({ onLogout }) {
   const [comments, setComments] = useState(EXAMPLE_COMMENTS.map(comment => ({ text: comment })));
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -33,6 +33,7 @@ function CommentAnalyzer() {
     message: '',
     severity: 'success'
   });
+  const fileInputRef = useRef(null);
 
   const handleAddComment = () => {
     setComments([...comments, { text: '' }]);
@@ -82,87 +83,175 @@ function CommentAnalyzer() {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const workbook = XLSX.read(e.target?.result, { type: 'binary' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // 获取第一列的所有非空评论
+        const newComments = data
+          .map(row => row[0])
+          .filter(comment => comment && typeof comment === 'string' && comment.trim())
+          .map(comment => ({ text: comment }));
+
+        if (newComments.length === 0) {
+          setSnackbar({
+            open: true,
+            message: '未在Excel文件中找到有效评论',
+            severity: 'error'
+          });
+          return;
+        }
+
+        setComments(prevComments => [...prevComments, ...newComments]);
+        setSnackbar({
+          open: true,
+          message: `成功导入 ${newComments.length} 条评论`,
+          severity: 'success'
+        });
+      } catch (error) {
+        console.error('Excel解析错误:', error);
+        setSnackbar({
+          open: true,
+          message: '无法解析Excel文件',
+          severity: 'error'
+        });
+      }
+    };
+
+    reader.onerror = () => {
+      setSnackbar({
+        open: true,
+        message: '读取文件失败',
+        severity: 'error'
+      });
+    };
+
+    reader.readAsBinaryString(file);
+    // 重置文件输入以允许选择相同的文件
+    event.target.value = '';
+  };
+
+  const handleClearCache = async () => {
+    try {
+      // 清空本地状态
+      setComments([]);
+      setResults(null);
+      
+      setSnackbar({
+        open: true,
+        message: '缓存已清空',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('清空缓存错误:', error);
+      setSnackbar({
+        open: true,
+        message: '清空缓存失败',
+        severity: 'error'
+      });
+    }
+  };
+
   return (
-    <Container maxWidth="md">
-      <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          客户评论分析器
-        </Typography>
-        
-        <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {comments.map((comment, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                <TextField
-                  multiline
-                  rows={2}
-                  value={comment.text}
-                  onChange={(e) => handleCommentChange(index, e.target.value)}
-                  placeholder={`评论 ${index + 1}`}
-                  variant="outlined"
-                  fullWidth
-                  disabled={loading}
-                />
-                {comments.length > 1 && (
-                  <IconButton
-                    onClick={() => handleRemoveComment(index)}
+    <>
+      <Header onLogout={onLogout} onUpload={handleUpload} onClearCache={handleClearCache} />
+      <Container maxWidth="md">
+        <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {comments.map((comment, index) => (
+                <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                  <TextField
+                    multiline
+                    rows={2}
+                    value={comment.text}
+                    onChange={(e) => handleCommentChange(index, e.target.value)}
+                    placeholder={`评论 ${index + 1}`}
+                    variant="outlined"
+                    fullWidth
                     disabled={loading}
-                    color="error"
-                    size="small"
-                  >
-                    <RemoveIcon />
-                  </IconButton>
-                )}
-              </Box>
-            ))}
-            
-            <Button
-              startIcon={<AddIcon />}
-              onClick={handleAddComment}
-              disabled={loading}
-              sx={{ alignSelf: 'flex-start' }}
-            >
-              添加评论
-            </Button>
-          </Box>
-        </Paper>
-        
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={loading}
-            startIcon={loading && <CircularProgress size={20} color="inherit" />}
-          >
-            {loading ? '分析中...' : '分析评论'}
-          </Button>
+                  />
+                  {comments.length > 1 && (
+                    <IconButton
+                      onClick={() => handleRemoveComment(index)}
+                      disabled={loading}
+                      color="error"
+                      size="small"
+                    >
+                      <RemoveIcon />
+                    </IconButton>
+                  )}
+                </Box>
+              ))}
+              
+              <Button
+                startIcon={<AddIcon />}
+                onClick={handleAddComment}
+                disabled={loading}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                添加评论
+              </Button>
+            </Box>
+          </Paper>
           
-          {loading && (
-            <Typography variant="body2" color="text.secondary">
-              正在使用 DeepSeek 分析评论...
-            </Typography>
-          )}
-        </Box>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={loading}
+              startIcon={loading && <CircularProgress size={20} color="inherit" />}
+            >
+              {loading ? '分析中...' : '分析评论'}
+            </Button>
+            
+            {loading && (
+              <Typography variant="body2" color="text.secondary">
+                正在使用 DeepSeek 分析评论...
+              </Typography>
+            )}
+          </Box>
 
-        {results && <AnalysisResults results={results} comments={comments} />}
+          {results && <AnalysisResults results={results} comments={comments} />}
 
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={5000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={handleCloseSnackbar} 
-            severity={snackbar.severity}
-            variant="filled"
-            sx={{ width: '100%' }}
+          <Input
+            type="file"
+            inputRef={fileInputRef}
+            sx={{ display: 'none' }}
+            onChange={handleFileChange}
+            accept=".xlsx,.xls"
+          />
+
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={5000}
+            onClose={handleCloseSnackbar}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
           >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Container>
+            <Alert 
+              onClose={handleCloseSnackbar} 
+              severity={snackbar.severity}
+              variant="filled"
+              sx={{ width: '100%' }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
+        </Box>
+      </Container>
+    </>
   );
 }
 

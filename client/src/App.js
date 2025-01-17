@@ -61,11 +61,16 @@ function App() {
     setIsAuthenticated(true);
   };
 
+  const handleLogout = () => {
+    clearAuthStatus();
+    setIsAuthenticated(false);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       {isAuthenticated ? (
-        <CommentAnalyzer />
+        <CommentAnalyzer onLogout={handleLogout} />
       ) : (
         <AuthPage onAuthSuccess={handleAuthSuccess} />
       )}
