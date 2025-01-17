@@ -1,19 +1,45 @@
 const axios = require('axios');
 const { COMMENT_ANALYSIS_PROMPT } = require('../prompts/commentAnalysis');
+const db = require('./databaseService');
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 exports.analyzeWithDeepSeek = async (comments) => {
   try {
-    // 创建取消令牌
-    const CancelToken = axios.CancelToken;
-    const source = CancelToken.source();
+    // 检查是否所有评论都有缓存
+    const cachedResults = await Promise.all(
+      comments.map(async (comment) => {
+        const cached = await db.findAnalysisByContent(comment);
+        if (cached) {
+          return {
+            ...JSON.parse(cached.highlights),
+            sentiment: cached.sentiment,
+            score: cached.score,
+            translation: cached.translation,
+            translatedHighlights: JSON.parse(cached.translated_highlights),
+            keywords: JSON.parse(cached.keywords)
+          };
+        }
+        return null;
+      })
+    );
 
-    // 设置超时定时器
-    const timeout = setTimeout(() => {
-      source.cancel('请求超时');
-    }, 50000); // 50秒超时
+    // 如果所有评论都有缓存，直接返回
+    if (cachedResults.every(result => result !== null)) {
+      return {
+        analyses: cachedResults,
+        themes: [], // TODO: 从缓存中计算主题
+        overallSentiment: {
+          positive: cachedResults.filter(r => r.sentiment === 'positive').length,
+          negative: cachedResults.filter(r => r.sentiment === 'negative').length,
+          neutral: cachedResults.filter(r => r.sentiment === 'neutral').length
+        }
+      };
+    }
 
+    // 对未缓存的评论调用 DeepSeek API
+    const uncachedComments = comments.filter((_, index) => !cachedResults[index]);
+    
     const response = await axios.post(
       DEEPSEEK_API_URL,
       {
@@ -25,7 +51,7 @@ exports.analyzeWithDeepSeek = async (comments) => {
           },
           {
             role: "user",
-            content: JSON.stringify(comments)
+            content: JSON.stringify(uncachedComments)
           }
         ],
         temperature: 0.1,
@@ -36,38 +62,32 @@ exports.analyzeWithDeepSeek = async (comments) => {
           'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 50000, // 50秒超时
-        cancelToken: source.token
+        timeout: 50000
       }
     );
 
-    // 清除超时定时器
-    clearTimeout(timeout);
-
     const result = JSON.parse(response.data.choices[0].message.content);
-    
-    result.analyses = result.analyses.map(analysis => ({
-      ...analysis,
-      translatedHighlights: analysis.translatedHighlights || {
-        positive: [],
-        negative: []
-      }
-    }));
 
-    return result;
+    // 保存新的分析结果到数据库
+    await Promise.all(
+      uncachedComments.map((comment, index) => 
+        db.saveAnalysis(comment, result.analyses[index])
+      )
+    );
+
+    // 合并缓存和新分析的结果
+    const finalResults = comments.map((_, index) => 
+      cachedResults[index] || result.analyses[index - cachedResults.filter(r => r !== null).length]
+    );
+
+    return {
+      analyses: finalResults,
+      themes: result.themes,
+      overallSentiment: result.overallSentiment
+    };
+
   } catch (error) {
-    if (axios.isCancel(error)) {
-      throw new Error('请求超时，请稍后重试');
-    }
-    
-    if (error.response) {
-      console.error('DeepSeek API 错误响应:', {
-        status: error.response.status,
-        data: error.response.data
-      });
-    } else if (error.request) {
-      console.error('DeepSeek API 请求失败:', error.message);
-    }
+    console.error('DeepSeek API 错误:', error);
     throw new Error(`评论分析失败: ${error.message}`);
   }
 }; 

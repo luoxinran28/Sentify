@@ -9,15 +9,22 @@ exports.analyzeComments = async (req, res) => {
     }
 
     try {
-      // 一次性分析所有评论
-      const analysisResult = await analyzeWithDeepSeek(comments);
+      const validComments = comments
+        .map(c => typeof c === 'string' ? c : c.text)
+        .filter(text => text && text.trim().length > 0);
+
+      if (validComments.length === 0) {
+        return res.status(400).json({ error: '没有有效的评论内容' });
+      }
+
+      const analysisResult = await analyzeWithDeepSeek(validComments);
       
       const results = {
-        totalComments: comments.length,
+        totalComments: validComments.length,
         sentimentDistribution: analysisResult.overallSentiment,
         averageSentiment: (
           analysisResult.analyses.reduce((sum, curr) => sum + curr.score, 0) / 
-          comments.length
+          validComments.length
         ).toFixed(2),
         themes: analysisResult.themes,
         individualResults: analysisResult.analyses

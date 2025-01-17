@@ -10,7 +10,9 @@
     "express": "^4.17.1",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "sqlite3": "^5.1.7",
+    "crypto": "^1.0.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"
