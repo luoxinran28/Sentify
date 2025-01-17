@@ -1,5 +1,5 @@
 const deepseekService = require('./deepseekService');
-const db = require('./databaseService');
+const db = require('./postgresService');
 
 class CommentAnalysisService {
   async analyzeComments(comments) {
@@ -43,20 +43,40 @@ class CommentAnalysisService {
   async _getCachedResults(comments) {
     return Promise.all(
       comments.map(async (comment) => {
-        const cached = await db.findAnalysisByContent(comment);
-        if (cached) {
-          return {
-            ...JSON.parse(cached.highlights),
-            sentiment: cached.sentiment,
-            score: cached.score,
-            translation: cached.translation,
-            translatedHighlights: JSON.parse(cached.translated_highlights),
-            keywords: JSON.parse(cached.keywords)
-          };
+        try {
+          const cached = await db.findAnalysisByContent(comment);
+          if (cached) {
+            // 确保所有 JSON 字段都被正确解析
+            return {
+              highlights: this._safeParseJSON(cached.highlights, []),
+              sentiment: cached.sentiment,
+              score: cached.score,
+              translation: cached.translation,
+              translatedHighlights: this._safeParseJSON(cached.translated_highlights, []),
+              keywords: this._safeParseJSON(cached.keywords, [])
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error('缓存结果解析错误:', error);
+          return null;
         }
-        return null;
       })
     );
+  }
+
+  // 安全的 JSON 解析函数
+  _safeParseJSON(jsonString, defaultValue = null) {
+    try {
+      // 如果已经是对象，直接返回
+      if (typeof jsonString === 'object' && jsonString !== null) {
+        return jsonString;
+      }
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error('JSON 解析错误:', error);
+      return defaultValue;
+    }
   }
 
   async _saveAnalysisResults(comments, analyses) {
