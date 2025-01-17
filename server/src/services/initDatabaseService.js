@@ -2,8 +2,10 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
+let db = null;
+
 const initDatabase = async () => {
-  return new Promise((resolve, reject) => {
+  try {
     // 确保数据库目录存在
     const dbDir = path.join(__dirname, '../database');
     if (!fs.existsSync(dbDir)) {
@@ -11,15 +13,34 @@ const initDatabase = async () => {
     }
 
     const dbPath = path.join(dbDir, 'database.sqlite');
-    const db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('数据库连接错误:', err);
-        reject(err);
-        return;
-      }
-      console.log('数据库连接成功，路径:', dbPath);
-    });
+    
+    // 使用单例模式管理数据库连接
+    if (!db) {
+      db = await new Promise((resolve, reject) => {
+        const database = new sqlite3.Database(dbPath, (err) => {
+          if (err) {
+            console.error('数据库连接错误:', err);
+            reject(err);
+            return;
+          }
+          console.log('数据库连接成功，路径:', dbPath);
+          resolve(database);
+        });
+      });
 
+      // 初始化表结构
+      await createTables(db);
+    }
+
+    return db;
+  } catch (error) {
+    console.error('数据库初始化失败:', error);
+    throw error;
+  }
+};
+
+const createTables = (db) => {
+  return new Promise((resolve, reject) => {
     db.serialize(() => {
       // 创建评论表
       db.run(`
@@ -53,27 +74,16 @@ const initDatabase = async () => {
       db.run(`CREATE INDEX IF NOT EXISTS idx_content_hash ON comments(content_hash)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_expires_at ON analysis_results(expires_at)`, 
         (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
+          if (err) reject(err);
+          else resolve();
         }
       );
-    });
-
-    // 监听数据库错误
-    db.on('error', (err) => {
-      console.error('数据库错误:', err);
-    });
-
-    // 完成后关闭连接
-    db.close((err) => {
-      if (err) {
-        console.error('关闭数据库连接错误:', err);
-      }
     });
   });
 };
 
-module.exports = initDatabase; 
+// 导出数据库实例获取方法
+module.exports = {
+  initDatabase,
+  getDatabase: () => db
+}; 
