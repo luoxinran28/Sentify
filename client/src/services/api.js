@@ -27,4 +27,14 @@ export const analyzeComments = async (comments) => {
     const errorMessage = error.response?.data?.details || error.message;
     throw new Error(errorMessage);
   }
+};
+
+export const clearComments = async () => {
+  try {
+    const response = await axios.post(`${API_URL}/comments/clear`);
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
+  }
 }; 

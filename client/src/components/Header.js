@@ -82,7 +82,7 @@ function Header({ onLogout, onUpload, onClearCache }) {
             </Button>
           </Tooltip>
 
-          <Tooltip title="清空缓存数据">
+          <Tooltip title="清空所有评论数据">
             <Button
               variant="outlined"
               color="error"
@@ -90,7 +90,7 @@ function Header({ onLogout, onUpload, onClearCache }) {
               size="small"
               onClick={onClearCache}
             >
-              清空缓存
+              清空评论
             </Button>
           </Tooltip>
         </Box>

@@ -1,4 +1,5 @@
 const commentAnalysisService = require('../services/commentAnalysisService');
+const db = require('../services/postgresService');
 
 exports.analyzeComments = async (req, res) => {
   try {
@@ -33,6 +34,19 @@ exports.analyzeComments = async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       error: '分析过程中发生错误',
+      details: error.message 
+    });
+  }
+};
+
+exports.clearComments = async (req, res) => {
+  try {
+    await db.clearComments();
+    res.json({ success: true, message: '评论数据已清空' });
+  } catch (error) {
+    console.error('清空评论数据错误:', error);
+    res.status(500).json({ 
+      error: '清空评论数据失败',
       details: error.message 
     });
   }

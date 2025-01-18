@@ -179,6 +179,28 @@ class DatabaseService {
       client.release();
     }
   }
+
+  async clearComments() {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // 清空分析结果表
+      await client.query('DELETE FROM analysis_results');
+      
+      // 清空评论表
+      await client.query('DELETE FROM comments');
+      
+      await client.query('COMMIT');
+      return { success: true };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('清空评论数据失败:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = new DatabaseService(); 

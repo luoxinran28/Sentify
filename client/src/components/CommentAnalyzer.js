@@ -15,7 +15,7 @@ import {
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import Header from './Header';
 import AnalysisResults from './AnalysisResults';
-import { analyzeComments } from '../services/api';
+import { analyzeComments, clearComments } from '../services/api';
 import * as XLSX from 'xlsx';
 
 const EXAMPLE_COMMENTS = [
@@ -61,6 +61,25 @@ function CommentAnalyzer({ onLogout }) {
       return;
     }
 
+    if (validComments.length > 20) {
+      setSnackbar({
+        open: true,
+        message: '一次最多只能分析20条评论，请减少评论数量',
+        severity: 'error'
+      });
+      return;
+    }
+
+    const tooLongComments = validComments.filter(c => c.text.length > 1000);
+    if (tooLongComments.length > 0) {
+      setSnackbar({
+        open: true,
+        message: '单条评论长度不能超过1000个字符，请缩短评论内容',
+        severity: 'error'
+      });
+      return;
+    }
+
     setLoading(true);
     setResults(null);
     
@@ -71,7 +90,7 @@ function CommentAnalyzer({ onLogout }) {
       console.error('分析错误:', error);
       setSnackbar({
         open: true,
-        message: error.message || '分析失败',
+        message: error.message || '分析失败，请稍后重试',
         severity: 'error'
       });
     } finally {
@@ -99,7 +118,6 @@ function CommentAnalyzer({ onLogout }) {
         const worksheet = workbook.Sheets[firstSheetName];
         const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // 获取第一列的所有非空评论
         const newComments = data
           .map(row => row[0])
           .filter(comment => comment && typeof comment === 'string' && comment.trim())
@@ -114,7 +132,37 @@ function CommentAnalyzer({ onLogout }) {
           return;
         }
 
-        setComments(prevComments => [...prevComments, ...newComments]);
+        if (newComments.length > 20) {
+          setSnackbar({
+            open: true,
+            message: '一次最多只能导入20条评论，请减少Excel中的评论数量',
+            severity: 'error'
+          });
+          return;
+        }
+
+        const tooLongComments = newComments.filter(c => c.text.length > 1000);
+        if (tooLongComments.length > 0) {
+          setSnackbar({
+            open: true,
+            message: '单条评论长度不能超过1000个字符，请检查Excel中的评论内容',
+            severity: 'error'
+          });
+          return;
+        }
+
+        setComments(prevComments => {
+          if (prevComments.length + newComments.length > 20) {
+            setSnackbar({
+              open: true,
+              message: '评论总数不能超过20条，请先清空一些现有评论',
+              severity: 'error'
+            });
+            return prevComments;
+          }
+          return [...prevComments, ...newComments];
+        });
+        
         setSnackbar({
           open: true,
           message: `成功导入 ${newComments.length} 条评论`,
@@ -139,26 +187,26 @@ function CommentAnalyzer({ onLogout }) {
     };
 
     reader.readAsBinaryString(file);
-    // 重置文件输入以允许选择相同的文件
     event.target.value = '';
   };
 
-  const handleClearCache = async () => {
+  const handleClearComments = async () => {
     try {
-      // 清空本地状态
+      await clearComments();
+      
       setComments([]);
       setResults(null);
       
       setSnackbar({
         open: true,
-        message: '缓存已清空',
+        message: '评论数据已清空',
         severity: 'success'
       });
     } catch (error) {
-      console.error('清空缓存错误:', error);
+      console.error('清空评论数据错误:', error);
       setSnackbar({
         open: true,
-        message: '清空缓存失败',
+        message: error.message || '清空评论数据失败',
         severity: 'error'
       });
     }
@@ -166,7 +214,7 @@ function CommentAnalyzer({ onLogout }) {
 
   return (
     <>
-      <Header onLogout={onLogout} onUpload={handleUpload} onClearCache={handleClearCache} />
+      <Header onLogout={onLogout} onUpload={handleUpload} onClearCache={handleClearComments} />
       <Container maxWidth="md">
         <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
@@ -219,7 +267,7 @@ function CommentAnalyzer({ onLogout }) {
             
             {loading && (
               <Typography variant="body2" color="text.secondary">
-                正在使用 DeepSeek 分析评论...
+                正在分析评论...
               </Typography>
             )}
           </Box>

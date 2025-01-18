@@ -23,13 +23,19 @@ const createHighlightedText = (text, highlights, options = {}) => {
     indented = false
   } = options;
 
-  if (!highlights || (!highlights.positive.length && !highlights.negative.length)) {
+  // 确保highlights对象及其属性存在
+  const safeHighlights = {
+    positive: (highlights?.positive || []),
+    negative: (highlights?.negative || [])
+  };
+
+  if (!highlights || (!safeHighlights.positive.length && !safeHighlights.negative.length)) {
     return <Typography sx={indented ? { pl: 3 } : undefined}>{text}</Typography>;
   }
 
   const allHighlights = [
-    ...highlights.positive.map(word => ({ word, type: 'positive' })),
-    ...highlights.negative.map(word => ({ word, type: 'negative' }))
+    ...safeHighlights.positive.map(word => ({ word, type: 'positive' })),
+    ...safeHighlights.negative.map(word => ({ word, type: 'negative' }))
   ].sort((a, b) => {
     const indexA = text.toLowerCase().indexOf(a.word.toLowerCase());
     const indexB = text.toLowerCase().indexOf(b.word.toLowerCase());
