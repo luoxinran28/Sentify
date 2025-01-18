@@ -46,14 +46,14 @@ class CommentAnalysisService {
         try {
           const cached = await db.findAnalysisByContent(comment);
           if (cached) {
-            // 确保所有 JSON 字段都被正确解析
             return {
-              highlights: this._safeParseJSON(cached.highlights, []),
               sentiment: cached.sentiment,
               score: cached.score,
               translation: cached.translation,
-              translatedHighlights: this._safeParseJSON(cached.translated_highlights, []),
-              keywords: this._safeParseJSON(cached.keywords, [])
+              highlights: cached.highlights,
+              translatedHighlights: cached.translated_highlights,
+              keywords: cached.keywords,
+              summary: cached.summary
             };
           }
           return null;

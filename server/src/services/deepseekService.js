@@ -75,7 +75,8 @@ class DeepseekService {
         positive: Array.isArray(analysis.translatedHighlights?.positive) ? analysis.translatedHighlights.positive : [],
         negative: Array.isArray(analysis.translatedHighlights?.negative) ? analysis.translatedHighlights.negative : []
       },
-      keywords: Array.isArray(analysis.keywords) ? analysis.keywords : []
+      keywords: Array.isArray(analysis.keywords) ? analysis.keywords : [],
+      summary: analysis.summary || '暂无评论总结'
     }));
 
     // 确保主题分析存在

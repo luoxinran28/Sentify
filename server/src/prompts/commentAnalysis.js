@@ -5,6 +5,7 @@ exports.COMMENT_ANALYSIS_PROMPT =
 2. 提供准确的中文翻译
 3. 标注原文中的情感表达词组，并提供对应的中文翻译
 4. 提取关键主题和观点
+5. 为每条评论生成一个简短的中文总结，用通俗易懂的语言概括评论的主要内容和情感倾向
 
 返回格式示例：
 {
@@ -13,6 +14,7 @@ exports.COMMENT_ANALYSIS_PROMPT =
       "sentiment": "positive",
       "score": 0.8,
       "translation": "产品质量很好，但价格太贵了",
+      "summary": "用户对产品质量表示满意，但认为价格偏高",
       "highlights": {
         "positive": ["excellent quality"],
         "negative": ["too expensive"]
@@ -42,4 +44,5 @@ exports.COMMENT_ANALYSIS_PROMPT =
 1. translatedHighlights 中的词组必须与 translation 中的文本完全匹配
 2. highlights 与 translatedHighlights 必须一一对应
 3. 翻译要准确自然，符合中文表达习惯
-4. 每条评论都需要单独分析，但主题分析要考虑所有评论的整体情况`; 
+4. 每条评论都需要单独分析，但主题分析要考虑所有评论的整体情况
+5. summary 要简明扼要，突出评论的核心观点和情感态度`; 

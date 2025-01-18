@@ -92,6 +92,7 @@ class DatabaseService {
           highlights JSONB NOT NULL,
           translated_highlights JSONB NOT NULL,
           keywords JSONB NOT NULL,
+          summary TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           expires_at TIMESTAMP,
           FOREIGN KEY (comment_id) REFERENCES comments(id)
@@ -125,7 +126,20 @@ class DatabaseService {
            AND (ar.expires_at IS NULL OR ar.expires_at > NOW())`,
         [hash]
       );
-      return result.rows[0];
+      
+      if (result.rows[0]) {
+        const row = result.rows[0];
+        return {
+          sentiment: row.sentiment,
+          score: row.score,
+          translation: row.translation,
+          highlights: row.highlights,
+          translated_highlights: row.translated_highlights,
+          keywords: row.keywords,
+          summary: row.summary
+        };
+      }
+      return null;
     } catch (error) {
       console.error('查询分析结果失败:', error);
       throw error;
@@ -155,8 +169,8 @@ class DatabaseService {
       await client.query(
         `INSERT INTO analysis_results (
           comment_id, sentiment, score, translation,
-          highlights, translated_highlights, keywords, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          highlights, translated_highlights, keywords, summary, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           commentId,
           result.sentiment,
@@ -165,6 +179,7 @@ class DatabaseService {
           JSON.stringify(result.highlights),
           JSON.stringify(result.translatedHighlights),
           JSON.stringify(result.keywords),
+          result.summary,
           expiresAt
         ]
       );
@@ -177,6 +192,19 @@ class DatabaseService {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  async _safeParseJSON(jsonString, defaultValue = null) {
+    try {
+      // 如果已经是对象，直接返回
+      if (typeof jsonString === 'object' && jsonString !== null) {
+        return jsonString;
+      }
+      return jsonString ? JSON.parse(jsonString) : defaultValue;
+    } catch (error) {
+      console.error('JSON解析错误:', error);
+      return defaultValue;
     }
   }
 
