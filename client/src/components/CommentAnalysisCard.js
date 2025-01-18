@@ -162,6 +162,15 @@ function CommentAnalysisCard({ analysis, originalText }) {
               highlights={analysis.translatedHighlights}
             />
           </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              评论总结:
+            </Typography>
+            <Typography sx={{ pl: 3 }}>
+              {analysis.summary}
+            </Typography>
+          </Box>
         </Box>
 
         <Divider sx={{ my: 1 }} />
