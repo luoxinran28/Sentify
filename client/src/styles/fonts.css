@@ -1,0 +1,59 @@
+/* 导入字体文件 */
+@font-face {
+  font-family: 'Geist Sans';
+  src: local('Geist Sans Regular'),
+       url('../assets/fonts/Geist-v1.4.01/Geist-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: local('Geist Sans Medium'),
+       url('../assets/fonts/Geist-v1.4.01/Geist-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: local('Geist Sans SemiBold'),
+       url('../assets/fonts/Geist-v1.4.01/Geist-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: local('Geist Sans Bold'),
+       url('../assets/fonts/Geist-v1.4.01/Geist-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LXGW WenKai Lite';
+  src: local('LXGW WenKai Lite Regular'),
+       url('../assets/fonts/lxgw-wenkai-lite-v1.501/LXGWWenKaiLite-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LXGW WenKai Lite';
+  src: local('LXGW WenKai Lite Medium'),
+       url('../assets/fonts/lxgw-wenkai-lite-v1.501/LXGWWenKaiLite-Medium.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 定义混合字体族 */
+.mixed-font {
+  font-family: 'Geist Sans', 'LXGW WenKai Lite', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+} 

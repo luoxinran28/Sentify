@@ -3,6 +3,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import CommentAnalyzer from './components/CommentAnalyzer';
 import AuthPage from './components/AuthPage';
 import { checkAuthStatus, clearAuthStatus, setAuthStatus } from './utils/auth';
+import './styles/fonts.css';
 
 const theme = createTheme({
   palette: {
@@ -16,6 +17,8 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: [
+      'Geist Sans',
+      'LXGW WenKai Lite',
       '-apple-system',
       'BlinkMacSystemFont',
       '"Segoe UI"',
@@ -24,6 +27,29 @@ const theme = createTheme({
       'Arial',
       'sans-serif',
     ].join(','),
+    h1: { fontWeight: 700 },
+    h2: { fontWeight: 700 },
+    h3: { fontWeight: 600 },
+    h4: { fontWeight: 600 },
+    h5: { fontWeight: 600 },
+    h6: { fontWeight: 600 },
+    subtitle1: { fontWeight: 500 },
+    subtitle2: { fontWeight: 500 },
+    body1: { fontWeight: 400 },
+    body2: { fontWeight: 400 },
+    button: { 
+      fontWeight: 500,
+      textTransform: 'none' // 防止按钮文字自动大写
+    }
+  },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          fontFeatureSettings: '"liga" 1', // 启用连字
+        },
+      },
+    },
   },
 });
 
