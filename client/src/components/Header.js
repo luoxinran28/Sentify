@@ -66,32 +66,29 @@ function Header({ onLogout, onUpload, onClearCache }) {
 
         {/* 标题 */}
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          评论分析系统
+          Sentify
         </Typography>
 
         {/* 右侧按钮组 */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="上传批量评论">
-            <Button
-              variant="outlined"
-              startIcon={<UploadIcon />}
-              size="small"
+            <IconButton
+              color="primary"
               onClick={onUpload}
+              size="small"
             >
-              批量上传
-            </Button>
+              <UploadIcon />
+            </IconButton>
           </Tooltip>
 
           <Tooltip title="清空所有评论数据">
-            <Button
-              variant="outlined"
+            <IconButton
               color="error"
-              startIcon={<ClearIcon />}
-              size="small"
               onClick={onClearCache}
+              size="small"
             >
-              清空评论
-            </Button>
+              <ClearIcon />
+            </IconButton>
           </Tooltip>
         </Box>
       </Toolbar>
