@@ -16,17 +16,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: [
-      'Geist Sans',
-      'LXGW WenKai Lite',
-      '-apple-system',
-      'BlinkMacSystemFont',
-      '"Segoe UI"',
-      'Roboto',
-      '"Helvetica Neue"',
-      'Arial',
-      'sans-serif',
-    ].join(','),
+    fontFamily: 'var(--font-family-base)',
     h1: { fontWeight: 700 },
     h2: { fontWeight: 700 },
     h3: { fontWeight: 600 },
