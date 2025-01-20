@@ -8,7 +8,8 @@ import {
   MenuItem,
   Button,
   Box,
-  Tooltip
+  Tooltip,
+  Divider
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -38,6 +39,13 @@ function Header({ onLogout, onUpload, onClearCache }) {
     }
   };
 
+  const handleClearCache = () => {
+    handleClose();
+    if (onClearCache) {
+      onClearCache();
+    }
+  };
+
   return (
     <AppBar position="static" color="default" elevation={1}>
       <Toolbar>
@@ -58,6 +66,11 @@ function Header({ onLogout, onUpload, onClearCache }) {
           onClose={handleClose}
           onClick={handleClose}
         >
+          <MenuItem onClick={handleClearCache}>
+            <ClearIcon sx={{ mr: 1 }} />
+            清空数据
+          </MenuItem>
+          <Divider sx={{ my: 1 }} />
           <MenuItem onClick={handleLogout}>
             <LogoutIcon sx={{ mr: 1 }} />
             退出登录
@@ -71,24 +84,15 @@ function Header({ onLogout, onUpload, onClearCache }) {
 
         {/* 右侧按钮组 */}
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="上传批量评论">
-            <IconButton
-              color="primary"
+          <Tooltip title="上传评论">
+            <Button
+              variant="outlined"
+              startIcon={<UploadIcon />}
+              size="small"
               onClick={onUpload}
-              size="small"
             >
-              <UploadIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="清空所有评论数据">
-            <IconButton
-              color="error"
-              onClick={onClearCache}
-              size="small"
-            >
-              <ClearIcon />
-            </IconButton>
+              上传
+            </Button>
           </Tooltip>
         </Box>
       </Toolbar>
