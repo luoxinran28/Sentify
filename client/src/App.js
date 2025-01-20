@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import CommentAnalyzer from './components/CommentAnalyzer';
+import ScenePage from './components/ScenePage';
 import AuthPage from './components/AuthPage';
 import { checkAuthStatus, clearAuthStatus, setAuthStatus } from './utils/auth';
 import './styles/fonts.css';
@@ -85,11 +87,17 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {isAuthenticated ? (
-        <CommentAnalyzer onLogout={handleLogout} />
-      ) : (
-        <AuthPage onAuthSuccess={handleAuthSuccess} />
-      )}
+      <Router>
+        {isAuthenticated ? (
+          <Routes>
+            <Route path="/" element={<ScenePage onLogout={handleLogout} />} />
+            <Route path="/analyzer" element={<CommentAnalyzer />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        ) : (
+          <AuthPage onAuthSuccess={handleAuthSuccess} />
+        )}
+      </Router>
     </ThemeProvider>
   );
 }
