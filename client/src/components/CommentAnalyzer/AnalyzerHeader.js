@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
   IconButton,
   Typography,
-  Button,
+  Menu,
+  MenuItem,
   Box,
-  Tooltip,
+  Divider,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
+  Apps as AppsIcon,
   Upload as UploadIcon,
   DeleteSweep as ClearIcon,
 } from '@mui/icons-material';
@@ -19,9 +21,28 @@ function AnalyzerHeader({ onUpload, onClearCache, sceneTitle }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { previousPath } = location.state || { previousPath: '/' };
+  const [anchorEl, setAnchorEl] = useState(null);
 
   const handleBack = () => {
     navigate(previousPath);
+  };
+
+  const handleToolsClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleUpload = () => {
+    handleClose();
+    onUpload();
+  };
+
+  const handleClearCache = () => {
+    handleClose();
+    onClearCache();
   };
 
   return (
@@ -42,30 +63,38 @@ function AnalyzerHeader({ onUpload, onClearCache, sceneTitle }) {
           {sceneTitle}
         </Typography>
 
-        {/* 右侧按钮组 */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="清空当前场景数据">
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<ClearIcon />}
-              size="small"
-              onClick={onClearCache}
-            >
+        {/* 工具菜单 */}
+        <Box>
+          <IconButton
+            color="inherit"
+            onClick={handleToolsClick}
+            size="large"
+          >
+            <AppsIcon />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem onClick={handleUpload}>
+              <UploadIcon sx={{ mr: 1 }} />
+              上传评论
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={handleClearCache}>
+              <ClearIcon sx={{ mr: 1 }} />
               清空数据
-            </Button>
-          </Tooltip>
-
-          <Tooltip title="上传评论">
-            <Button
-              variant="outlined"
-              startIcon={<UploadIcon />}
-              size="small"
-              onClick={onUpload}
-            >
-              上传
-            </Button>
-          </Tooltip>
+            </MenuItem>
+          </Menu>
         </Box>
       </Toolbar>
     </AppBar>
