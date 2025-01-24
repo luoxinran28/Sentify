@@ -5,16 +5,18 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon --inspect src/index.js",
-    "debug": "node --inspect-brk src/index.js"
+    "debug": "node --inspect-brk src/index.js",
+    "migrate": "node src/database/migrations/migrate.js",
+    "migrate:revert": "node src/database/migrations/migrate.js revert"
   },
   "dependencies": {
-    "express": "^4.17.1",
-    "cors": "^2.8.5",
-    "dotenv": "^10.0.0",
     "axios": "^1.6.0",
-    "pg": "^8.11.3"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.17.1",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"
   }
-} 
+}
