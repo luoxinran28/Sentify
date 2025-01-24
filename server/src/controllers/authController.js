@@ -1,4 +1,4 @@
-const { verifyCode } = require('../services/authService');
+const { verifyCode, getUserByCode } = require('../services/authService');
 
 exports.verifyAccessCode = async (req, res) => {
   try {
@@ -11,10 +11,13 @@ exports.verifyAccessCode = async (req, res) => {
       });
     }
 
-    const isValid = await verifyCode(code);
+    const user = await getUserByCode(code);
     
-    if (isValid) {
-      res.json({ success: true });
+    if (user) {
+      res.json({ 
+        success: true,
+        userId: user.id
+      });
     } else {
       res.status(401).json({ 
         success: false, 

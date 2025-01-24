@@ -4,6 +4,7 @@ const path = require('path');
 const commentRoutes = require('./routes/commentRoutes');
 const authRoutes = require('./routes/authRoutes');
 const db = require('./services/postgresService');
+const scenarioRoutes = require('./routes/scenarioRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 // 评论分析路由
 app.use('/api/comments', commentRoutes);
+app.use('/api/scenarios', scenarioRoutes);
 
 // 初始化数据库并启动服务器
 const startServer = async () => {
@@ -51,3 +53,12 @@ process.on('uncaughtException', (error) => {
 });
 
 startServer(); 
+
+// 错误处理中间件
+app.use((err, req, res, next) => {
+  console.error('服务器错误:', err);
+  res.status(500).json({
+    error: '服务器内部错误',
+    details: err.message
+  });
+}); 
