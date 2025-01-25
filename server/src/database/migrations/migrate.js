@@ -10,7 +10,7 @@ const createTables = `
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
-    access_code CHAR(4) NOT NULL,
+    access_code VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP WITH TIME ZONE
   );
@@ -25,18 +25,8 @@ const createTables = `
     prompt TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT user_scenarios_limit CHECK (
-      (SELECT COUNT(*) FROM scenarios s2 
-       WHERE s2.user_id = user_id 
-       AND s2.deleted_at IS NULL) <= 5
-    )
+    FOREIGN KEY (user_id) REFERENCES users(id)
   );
-
-  -- 创建索引
-  CREATE INDEX IF NOT EXISTS idx_scenarios_user_id ON scenarios(user_id);
-  CREATE INDEX IF NOT EXISTS idx_scenarios_updated_at ON scenarios(updated_at);
 
   -- 创建文章表（替代原 comments 表）
   CREATE TABLE IF NOT EXISTS articles (

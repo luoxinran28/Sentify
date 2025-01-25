@@ -1,21 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getScenarios, 
-  createScenario, 
-  updateScenario, 
-  deleteScenario,
-  getScenario
-} = require('../controllers/scenarioController');
-const { authenticateUser } = require('../middleware/authMiddleware');
+const { authenticateUser } = require('../middleware/auth');
+const scenarioController = require('../controllers/scenarioController');
 
-// 所有场景路由都需要认证
+// 应用认证中间件到所有场景路由
 router.use(authenticateUser);
 
-router.get('/', getScenarios);
-router.post('/', createScenario);
-router.get('/:id', getScenario);
-router.put('/:id', updateScenario);
-router.delete('/:id', deleteScenario);
+// 场景路由
+router.get('/', scenarioController.getScenarios);
+router.post('/', scenarioController.createScenario);
+router.put('/:id', scenarioController.updateScenario);
+router.delete('/:id', scenarioController.deleteScenario);
 
 module.exports = router; 

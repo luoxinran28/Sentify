@@ -6,6 +6,7 @@ import ScenePage from './components/ScenePage';
 import AuthPage from './components/AuthPage';
 import { checkAuthStatus, clearAuthStatus, setAuthStatus } from './utils/auth';
 import './styles/fonts.css';
+import SceneList from './components/ScenePage/SceneList';
 
 const theme = createTheme({
   palette: {
@@ -74,8 +75,8 @@ function App() {
     };
   }, []);
 
-  const handleAuthSuccess = () => {
-    setAuthStatus();
+  const handleAuthSuccess = (user) => {
+    setAuthStatus(user);  // 传入用户信息
     setIsAuthenticated(true);
   };
 
@@ -90,8 +91,8 @@ function App() {
       <BrowserRouter>
         {isAuthenticated ? (
           <Routes>
-            <Route path="/" element={<ScenePage onLogout={handleLogout} />} />
-            <Route path="/comment-analyzer" element={<CommentAnalyzer />} />
+            <Route path="/" element={<SceneList />} />
+            <Route path="/scene/:id" element={<CommentAnalyzer />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         ) : (

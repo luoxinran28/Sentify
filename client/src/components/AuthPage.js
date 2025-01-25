@@ -75,7 +75,7 @@ function AuthPage({ onAuthSuccess }) {
     try {
       const result = await verifyCode(fullCode);
       if (result.success) {
-        onAuthSuccess();
+        onAuthSuccess(result.user);
       } else {
         setError('验证码错误');
         // 清空输入

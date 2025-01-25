@@ -1,34 +1,23 @@
-const { verifyCode, getUserByCode } = require('../services/authService');
+const authService = require('../services/authService');
 
-exports.verifyAccessCode = async (req, res) => {
+exports.verifyCode = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code: encryptedCode } = req.body;
     
-    if (!code) {
-      return res.status(400).json({ 
-        success: false, 
-        details: '验证码不能为空' 
+    // 验证码基本验证
+    if (!encryptedCode) {
+      return res.status(400).json({
+        success: false,
+        message: '无效的验证码格式'
       });
     }
 
-    const user = await getUserByCode(code);
-    
-    if (user) {
-      res.json({ 
-        success: true,
-        userId: user.id
-      });
-    } else {
-      res.status(401).json({ 
-        success: false, 
-        details: '验证码错误' 
-      });
-    }
+    const result = await authService.verifyAndCreateUser(encryptedCode);
+    res.json(result);
   } catch (error) {
-    console.error('验证错误:', error);
-    res.status(500).json({ 
-      success: false, 
-      details: '验证过程发生错误' 
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 }; 

@@ -1,19 +1,37 @@
-const crypto = require('crypto');
+const { query } = require('./initDatabaseService');
 
 // 验证访问码
-exports.verifyCode = async (encryptedCode) => {
+const verifyAndCreateUser = async (encryptedCode) => {
   try {
-    // 从环境变量获取正确的加密后的访问码
-    const validEncryptedCode = process.env.ACCESS_CODE_HASH;
-    
-    if (!validEncryptedCode) {
-      throw new Error('系统未配置访问码');
+    // 检查用户是否已存在
+    const existingUser = await query(
+      'SELECT * FROM users WHERE access_code = $1',
+      [encryptedCode]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return {
+        success: true,
+        user: existingUser.rows[0]
+      };
     }
 
-    // 比较加密后的访问码
-    return encryptedCode === validEncryptedCode;
+    // 如果用户不存在，创建新用户
+    const newUser = await query(
+      'INSERT INTO users (email, access_code) VALUES ($1, $2) RETURNING *',
+      ['luo.xinran@foxmail.com', encryptedCode]
+    );
+
+    return {
+      success: true,
+      user: newUser.rows[0]
+    };
   } catch (error) {
     console.error('验证码验证错误:', error);
-    throw error;
+    throw new Error('验证失败，请稍后重试');
   }
+};
+
+module.exports = {
+  verifyAndCreateUser
 }; 

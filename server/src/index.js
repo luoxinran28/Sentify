@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const commentRoutes = require('./routes/commentRoutes');
-const authRoutes = require('./routes/authRoutes');
-const db = require('./services/postgresService');
 const scenarioRoutes = require('./routes/scenarioRoutes');
+const authRoutes = require('./routes/authRoutes');
+const commentRoutes = require('./routes/commentRoutes');
+const db = require('./services/postgresService');
+const { authenticateUser } = require('./middleware/auth');
 require('dotenv').config();
 
 const app = express();
@@ -15,9 +16,10 @@ app.use(express.json());
 
 // 添加验证路由
 app.use('/api/auth', authRoutes);
+// 场景路由
+app.use('/api/scenarios', scenarioRoutes);
 // 评论分析路由
 app.use('/api/comments', commentRoutes);
-app.use('/api/scenarios', scenarioRoutes);
 
 // 初始化数据库并启动服务器
 const startServer = async () => {
@@ -31,7 +33,7 @@ const startServer = async () => {
     console.log('数据库初始化成功');
     
     app.listen(PORT, () => {
-      console.log(`服务器运行在端口 ${PORT}`);
+      console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
     console.error('服务器启动失败:', error);
@@ -53,12 +55,3 @@ process.on('uncaughtException', (error) => {
 });
 
 startServer(); 
-
-// 错误处理中间件
-app.use((err, req, res, next) => {
-  console.error('服务器错误:', err);
-  res.status(500).json({
-    error: '服务器内部错误',
-    details: err.message
-  });
-}); 
