@@ -6,13 +6,11 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Divider,
+  Box
 } from '@mui/material';
-import {
-  AccountCircle as AccountIcon,
-} from '@mui/icons-material';
+import { AccountCircle } from '@mui/icons-material';
 
-function Header({ onLogout }) {
+function Header({ menuItems = [] }) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenu = (event) => {
@@ -23,9 +21,9 @@ function Header({ onLogout }) {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleMenuItemClick = (onClick) => {
     handleClose();
-    onLogout();
+    onClick?.();
   };
 
   return (
@@ -34,30 +32,29 @@ function Header({ onLogout }) {
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Sentify
         </Typography>
-        <div>
+        <Box>
           <IconButton
             size="large"
             onClick={handleMenu}
             color="inherit"
           >
-            <AccountIcon />
+            <AccountCircle />
           </IconButton>
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleClose}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
           >
-            <MenuItem onClick={handleLogout}>退出登录</MenuItem>
+            {menuItems.map((item, index) => (
+              <MenuItem 
+                key={index}
+                onClick={() => handleMenuItemClick(item.onClick)}
+              >
+                {item.label}
+              </MenuItem>
+            ))}
           </Menu>
-        </div>
+        </Box>
       </Toolbar>
     </AppBar>
   );
