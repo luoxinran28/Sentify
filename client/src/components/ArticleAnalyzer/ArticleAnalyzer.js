@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Container, 
   Box, 
@@ -8,9 +8,12 @@ import {
   IconButton,
   Typography,
   Snackbar,
-  Alert
+  Alert,
+  Input,
+  CircularProgress
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import * as XLSX from 'xlsx';
 import { useLocation } from 'react-router-dom';
 import { analyzeArticles, clearArticles } from '../../services/api';
 import AnalyzerHeader from './AnalyzerHeader';
@@ -27,6 +30,8 @@ function ArticleAnalyzer() {
     message: '',
     severity: 'success'
   });
+
+  const fileInputRef = useRef(null);
 
   const handleArticleChange = (index, value) => {
     const newArticles = [...articles];
@@ -59,7 +64,7 @@ function ArticleAnalyzer() {
         return;
       }
 
-      const result = await analyzeArticles(validArticles);
+      const result = await analyzeArticles(validArticles, scene.id);
       setResults(result);
     } catch (error) {
       console.error('分析错误:', error);
@@ -75,7 +80,7 @@ function ArticleAnalyzer() {
 
   const handleClearArticles = async () => {
     try {
-      await clearArticles();
+      await clearArticles(scene.id);
       
       setArticles([{ text: '' }]);
       setResults(null);
@@ -96,7 +101,92 @@ function ArticleAnalyzer() {
   };
 
   const handleUpload = () => {
-    // 处理上传功能
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const buffer = e.target?.result;
+        const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        const newArticles = data
+          .map(row => row[0])
+          .filter(article => article && typeof article === 'string' && article.trim())
+          .map(article => ({ text: article }));
+
+        if (newArticles.length === 0) {
+          setSnackbar({
+            open: true,
+            message: '未在Excel文件中找到有效内容',
+            severity: 'error'
+          });
+          return;
+        }
+
+        if (newArticles.length > 20) {
+          setSnackbar({
+            open: true,
+            message: '一次最多只能导入20条内容，请减少Excel中的数量',
+            severity: 'error'
+          });
+          return;
+        }
+
+        const tooLongArticles = newArticles.filter(c => c.text.length > 1000);
+        if (tooLongArticles.length > 0) {
+          setSnackbar({
+            open: true,
+            message: '单条内容长度不能超过1000个字符，请检查Excel中的内容',
+            severity: 'error'
+          });
+          return;
+        }
+
+        setArticles(prevArticles => {
+          if (prevArticles.length + newArticles.length > 20) {
+            setSnackbar({
+              open: true,
+              message: '内容总数不能超过20条，请先清空一些现有内容',
+              severity: 'error'
+            });
+            return prevArticles;
+          }
+          return [...prevArticles, ...newArticles];
+        });
+
+        setSnackbar({
+          open: true,
+          message: `成功导入 ${newArticles.length} 条内容`,
+          severity: 'success'
+        });
+      } catch (error) {
+        console.error('Excel解析错误:', error);
+        setSnackbar({
+          open: true,
+          message: '无法解析Excel文件',
+          severity: 'error'
+        });
+      }
+    };
+
+    reader.onerror = () => {
+      setSnackbar({
+        open: true,
+        message: '读取文件失败',
+        severity: 'error'
+      });
+    };
+
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
   };
 
   return (
@@ -171,6 +261,14 @@ function ArticleAnalyzer() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Input
+        type="file"
+        inputRef={fileInputRef}
+        sx={{ display: 'none' }}
+        onChange={handleFileChange}
+        accept=".xlsx,.xls"
+      />
     </>
   );
 }

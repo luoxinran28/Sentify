@@ -86,9 +86,9 @@ export const scenarioApi = {
 };
 
 // 文章分析相关 API
-export const analyzeArticles = async (articles) => {
+export const analyzeArticles = async (articles, scenarioId) => {
   try {
-    const response = await fetch(`${API_URL}/articles/analyze`, {
+    const response = await fetch(`${API_URL}/articles/${scenarioId}/analyze`, {
       method: 'POST',
       headers: addAccessCodeHeader({
         'Content-Type': 'application/json'
@@ -102,9 +102,9 @@ export const analyzeArticles = async (articles) => {
   }
 };
 
-export const clearArticles = async () => {
+export const clearArticles = async (scenarioId) => {
   try {
-    const response = await fetch(`${API_URL}/articles/clear`, {
+    const response = await fetch(`${API_URL}/articles/${scenarioId}/clear`, {
       method: 'POST',
       headers: addAccessCodeHeader({
         'Content-Type': 'application/json'

@@ -3,6 +3,7 @@ const articleAnalysisService = require('../services/articleAnalysisService');
 exports.analyzeArticles = async (req, res) => {
   try {
     const { articles } = req.body;
+    const { scenarioId } = req.params;  // 从URL参数获取scenarioId
     
     if (!Array.isArray(articles) || articles.length === 0) {
       return res.status(400).json({ error: '文章内容不能为空' });
@@ -16,7 +17,7 @@ exports.analyzeArticles = async (req, res) => {
       return res.status(400).json({ error: '没有有效的文章内容' });
     }
 
-    const analysisResult = await articleAnalysisService.analyzeArticles(validArticles);
+    const analysisResult = await articleAnalysisService.analyzeArticles(validArticles, scenarioId);
     
     const results = {
       totalArticles: validArticles.length,
@@ -40,7 +41,8 @@ exports.analyzeArticles = async (req, res) => {
 
 exports.clearArticles = async (req, res) => {
   try {
-    await articleAnalysisService.clearArticles(req.user.id);
+    const { scenarioId } = req.params;
+    await articleAnalysisService.clearArticles(scenarioId);
     res.json({ success: true, message: '数据已清空' });
   } catch (error) {
     res.status(500).json({ 

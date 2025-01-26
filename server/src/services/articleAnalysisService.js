@@ -1,11 +1,12 @@
 const { query } = require('./initDatabaseService');
 const deepseekService = require('./deepseekService');
+const crypto = require('crypto');
 
 class ArticleAnalysisService {
-  async analyzeArticles(articles) {
+  async analyzeArticles(articles, scenarioId) {
     try {
       // 检查缓存
-      const cachedResults = await this._getCachedResults(articles);
+      const cachedResults = await this._getCachedResults(articles, scenarioId);
 
       // 如果所有文章都有缓存，直接返回
       if (cachedResults.every(result => result !== null)) {
@@ -19,11 +20,11 @@ class ArticleAnalysisService {
       // 获取未缓存的文章
       const uncachedArticles = articles.filter((_, index) => !cachedResults[index]);
       
-      // 调用 DeepSeek API 分析未缓存的文章
+      // 调用 API 分析未缓存的文章
       const apiResult = await deepseekService.analyze(uncachedArticles);
 
       // 保存新的分析结果到数据库
-      await this._saveAnalysisResults(uncachedArticles, apiResult.analyses);
+      await this._saveAnalysisResults(uncachedArticles, apiResult.analyses, scenarioId);
 
       // 合并缓存和新分析的结果
       const finalResults = this._mergeCachedAndNewResults(articles, cachedResults, apiResult.analyses);
@@ -33,25 +34,26 @@ class ArticleAnalysisService {
         themes: apiResult.themes,
         overallSentiment: this._calculateOverallSentiment(finalResults)
       };
-
     } catch (error) {
       console.error('文章分析错误:', error);
       throw new Error(`分析失败: ${error.message}`);
     }
   }
 
-  async _getCachedResults(articles) {
+  async _getCachedResults(articles, scenarioId) {
     return Promise.all(
       articles.map(async (article) => {
         try {
+          const contentHash = this._generateContentHash(article);
           const result = await query(
-            `SELECT * FROM analysis_results ar
+            `SELECT ar.* FROM analysis_results ar
              JOIN articles a ON ar.article_id = a.id
-             WHERE a.content = $1 
+             WHERE a.content_hash = $1 
+             AND a.scenario_id = $2
              AND (ar.expires_at IS NULL OR ar.expires_at > NOW())
              ORDER BY ar.created_at DESC
              LIMIT 1`,
-            [article]
+            [contentHash, scenarioId]
           );
           return result.rows[0] || null;
         } catch (error) {
@@ -62,15 +64,18 @@ class ArticleAnalysisService {
     );
   }
 
-  async _saveAnalysisResults(articles, results) {
+  async _saveAnalysisResults(articles, results, scenarioId) {
     for (let i = 0; i < articles.length; i++) {
       try {
         await query('BEGIN');
 
         // 保存文章
+        const contentHash = this._generateContentHash(articles[i]);
         const articleResult = await query(
-          'INSERT INTO articles (content) VALUES ($1) RETURNING id',
-          [articles[i]]
+          `INSERT INTO articles (scenario_id, content, content_hash) 
+           VALUES ($1, $2, $3) 
+           RETURNING id`,
+          [scenarioId, articles[i], contentHash]
         );
 
         const articleId = articleResult.rows[0].id;
@@ -82,17 +87,17 @@ class ArticleAnalysisService {
         // 保存分析结果
         await query(
           `INSERT INTO analysis_results 
-           (article_id, sentiment, score, translation, highlights, 
-            translated_highlights, summary, expires_at)
+           (article_id, scenario_id, sentiment, score, translation, 
+            highlights, translated_highlights, expires_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             articleId,
+            scenarioId,
             results[i].sentiment,
             results[i].score,
             results[i].translation,
             JSON.stringify(results[i].highlights),
             JSON.stringify(results[i].translatedHighlights),
-            results[i].summary,
             expiresAt
           ]
         );
@@ -101,8 +106,13 @@ class ArticleAnalysisService {
       } catch (error) {
         await query('ROLLBACK');
         console.error('保存分析结果错误:', error);
+        throw error;
       }
     }
+  }
+
+  _generateContentHash(content) {
+    return crypto.createHash('sha256').update(content).digest('hex');
   }
 
   _generateThemesFromCache(results) {
@@ -142,7 +152,7 @@ class ArticleAnalysisService {
     });
   }
 
-  async clearArticles(userId) {
+  async clearArticles(scenarioId) {
     try {
       await query('BEGIN');
       
@@ -151,14 +161,14 @@ class ArticleAnalysisService {
         `DELETE FROM analysis_results ar
          USING articles a
          WHERE ar.article_id = a.id
-         AND a.user_id = $1`,
-        [userId]
+         AND a.scenario_id = $1`,
+        [scenarioId]
       );
       
       // 删除文章
       await query(
-        'DELETE FROM articles WHERE user_id = $1',
-        [userId]
+        'DELETE FROM articles WHERE scenario_id = $1',
+        [scenarioId]
       );
       
       await query('COMMIT');
