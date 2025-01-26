@@ -48,7 +48,7 @@ function SceneList({ onLogout }) {
   }, []);
 
   const handleSceneClick = (scene) => {
-    navigate('/comment-analyzer', { 
+    navigate('/article-analyzer', { 
       state: { 
         scene: scene,
         previousPath: window.location.pathname

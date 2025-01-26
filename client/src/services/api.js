@@ -14,9 +14,9 @@ const encryptCode = (code) => {
 
 // 添加请求拦截器
 api.interceptors.request.use((config) => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user.id) {
-    config.headers['X-User-ID'] = user.id;
+  const accessCode = localStorage.getItem('accessCode');
+  if (accessCode) {
+    config.headers['X-Access-Code'] = accessCode;
   }
   return config;
 });
@@ -35,7 +35,6 @@ export const verifyCode = async (code) => {
     const data = await response.json();
     
     if (data.success) {
-      // 保存加密后的验证码用于后续请求
       localStorage.setItem('accessCode', encryptedCode);
     }
     
@@ -46,47 +45,12 @@ export const verifyCode = async (code) => {
 };
 
 // 添加一个函数来获取存储的验证码
-export const getStoredAccessCode = () => {
-  return localStorage.getItem('accessCode');
-};
-
-// 修改其他 API 请求，使用加密后的验证码
 const addAccessCodeHeader = (headers = {}) => {
   const encryptedCode = localStorage.getItem('accessCode');
   if (encryptedCode) {
     headers['X-Access-Code'] = encryptedCode;
   }
   return headers;
-};
-
-// 在其他 API 请求中使用
-export const someApiCall = async () => {
-  const response = await fetch('/api/some-endpoint', {
-    headers: addAccessCodeHeader({
-      'Content-Type': 'application/json'
-    })
-  });
-  // ... 处理响应
-};
-
-export const analyzeComments = async (comments) => {
-  try {
-    const response = await api.post('/comments/analyze', { comments });
-    return response.data;
-  } catch (error) {
-    const errorMessage = error.response?.data?.details || error.message;
-    throw new Error(errorMessage);
-  }
-};
-
-export const clearComments = async () => {
-  try {
-    const response = await api.post('/comments/clear');
-    return response.data;
-  } catch (error) {
-    const errorMessage = error.response?.data?.details || error.message;
-    throw new Error(errorMessage);
-  }
 };
 
 // 场景相关 API
@@ -119,4 +83,56 @@ export const scenarioApi = {
       'Content-Type': 'application/json'
     })
   }).then(res => res.json())
+};
+
+// 文章分析相关 API
+export const analyzeArticles = async (articles) => {
+  try {
+    const response = await fetch(`${API_URL}/articles/analyze`, {
+      method: 'POST',
+      headers: addAccessCodeHeader({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify({ articles })
+    });
+    return response.json();
+  } catch (error) {
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
+  }
+};
+
+export const clearArticles = async () => {
+  try {
+    const response = await fetch(`${API_URL}/articles/clear`, {
+      method: 'POST',
+      headers: addAccessCodeHeader({
+        'Content-Type': 'application/json'
+      })
+    });
+    return response.json();
+  } catch (error) {
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
+  }
+};
+
+export const analyzeComments = async (comments) => {
+  try {
+    const response = await api.post('/comments/analyze', { comments });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
+  }
+};
+
+export const clearComments = async () => {
+  try {
+    const response = await api.post('/comments/clear');
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
+  }
 }; 

@@ -4,6 +4,7 @@ const path = require('path');
 const scenarioRoutes = require('./routes/scenarioRoutes');
 const authRoutes = require('./routes/authRoutes');
 const commentRoutes = require('./routes/commentRoutes');
+const articleRoutes = require('./routes/articleRoutes');
 const db = require('./services/postgresService');
 const { authenticateUser } = require('./middleware/auth');
 require('dotenv').config();
@@ -20,6 +21,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/scenarios', scenarioRoutes);
 // 评论分析路由
 app.use('/api/comments', commentRoutes);
+// 文章分析路由
+app.use('/api/articles', articleRoutes);
 
 // 初始化数据库并启动服务器
 const startServer = async () => {

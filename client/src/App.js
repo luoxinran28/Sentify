@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import CommentAnalyzer from './components/CommentAnalyzer';
-import ScenePage from './components/ScenePage';
+import ArticleAnalyzer from './components/ArticleAnalyzer';
 import AuthPage from './components/AuthPage';
 import { checkAuthStatus, clearAuthStatus, setAuthStatus } from './utils/auth';
 import './styles/fonts.css';
@@ -47,36 +46,14 @@ const theme = createTheme({
 });
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // 初始化时检查认证状态
-    return checkAuthStatus();
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // 定期检查会话状态
-    const checkInterval = setInterval(() => {
-      const isValid = checkAuthStatus();
-      setIsAuthenticated(isValid);
-    }, 60000); // 每分钟检查一次
-
-    // 添加存储事件监听，用于多标签页同步
-    const handleStorageChange = (e) => {
-      if (e.key === 'auth_status' || e.key === 'auth_timestamp') {
-        const isValid = checkAuthStatus();
-        setIsAuthenticated(isValid);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      clearInterval(checkInterval);
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    setIsAuthenticated(checkAuthStatus());
   }, []);
 
   const handleAuthSuccess = (user) => {
-    setAuthStatus(user);  // 传入用户信息
+    setAuthStatus(user);
     setIsAuthenticated(true);
   };
 
@@ -89,15 +66,38 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        {isAuthenticated ? (
-          <Routes>
-            <Route path="/" element={<SceneList />} />
-            <Route path="/scene/:id" element={<CommentAnalyzer />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        ) : (
-          <AuthPage onAuthSuccess={handleAuthSuccess} />
-        )}
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              isAuthenticated ? (
+                <SceneList onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/auth" 
+            element={
+              isAuthenticated ? (
+                <Navigate to="/" replace />
+              ) : (
+                <AuthPage onAuthSuccess={handleAuthSuccess} />
+              )
+            } 
+          />
+          <Route 
+            path="/article-analyzer" 
+            element={
+              isAuthenticated ? (
+                <ArticleAnalyzer />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            } 
+          />
+        </Routes>
       </BrowserRouter>
     </ThemeProvider>
   );
