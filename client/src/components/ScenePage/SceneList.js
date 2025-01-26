@@ -91,11 +91,12 @@ function SceneList({ onLogout }) {
             <SceneCard 
               scene={{
                 id: scene.id,
-                titleEn: scene.title_en,
-                titleCn: scene.title_zh,
+                titleEn: scene.titleEn,
+                titleCn: scene.titleZh,
                 source: scene.source,
                 hasLink: true,
-                prompt: scene.prompt
+                prompt: scene.prompt,
+                count: scene.count
               }}
               onClick={() => handleSceneClick(scene)}
             />

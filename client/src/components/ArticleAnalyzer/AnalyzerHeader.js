@@ -19,12 +19,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 function AnalyzerHeader({ onUpload, onClearCache, sceneTitle }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { previousPath } = location.state || { previousPath: '/' };
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleBack = () => {
-    navigate(previousPath);
+    navigate('/');
   };
 
   const handleToolsClick = (event) => {

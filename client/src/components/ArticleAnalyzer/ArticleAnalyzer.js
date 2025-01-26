@@ -222,7 +222,7 @@ function ArticleAnalyzer() {
       <AnalyzerHeader 
         onUpload={handleUpload} 
         onClearCache={handleClearArticles}
-        sceneTitle={scene?.titleCn}
+        sceneTitle={scene?.title_zh}
       />
       <Container maxWidth="md">
         <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>

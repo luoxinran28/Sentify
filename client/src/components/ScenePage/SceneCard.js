@@ -115,7 +115,7 @@ function SceneCard({ scene, onClick }) {
               fontWeight: 500
             }}
           >
-            {scene.count} 条评论
+            {scene.count || 0} 条文章
           </Typography>
         </Box>
       </CardContent>
