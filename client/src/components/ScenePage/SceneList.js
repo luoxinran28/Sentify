@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { debounce } from 'lodash';
 import { 
   Container, 
   Grid,
@@ -6,7 +7,8 @@ import {
   useMediaQuery,
   CircularProgress,
   Box,
-  Typography
+  Typography,
+  Button
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { scenarioApi } from '../../services/api';
@@ -20,6 +22,8 @@ function SceneList({ onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   
   const theme = useTheme();
   const navigate = useNavigate();
@@ -31,22 +35,56 @@ function SceneList({ onLogout }) {
     return 3;
   };
 
-  const fetchScenarios = async () => {
+  const loadScenarios = useCallback(async (pageNum, signal) => {
     try {
       setLoading(true);
-      const response = await scenarioApi.getScenarios();
-      setScenarios(response.scenarios);
+      const response = await scenarioApi.getScenarios(pageNum, signal);
+      
+      if (pageNum === 1) {
+        setScenarios(response.scenarios);
+      } else {
+        setScenarios(prev => [...prev, ...response.scenarios]);
+      }
+      
+      setHasMore(response.pagination.currentPage < response.pagination.totalPages);
     } catch (error) {
-      setError('获取场景列表失败');
-      console.error('获取场景列表失败:', error);
+      if (error.name !== 'AbortError') {  // 忽略取消请求的错误
+        console.error('获取场景列表失败:', error);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const debouncedLoadMore = useCallback(
+    debounce(() => {
+      if (!loading && hasMore) {
+        setPage(prev => prev + 1);
+      }
+    }, 300),
+    [loading, hasMore]
+  );
 
   useEffect(() => {
-    fetchScenarios();
-  }, []);
+    const abortController = new AbortController();
+    loadScenarios(page, abortController.signal);
+    
+    return () => {
+      abortController.abort(); // 组件卸载时取消请求
+    };
+  }, [page, loadScenarios]);
+
+  const handleScroll = useCallback((event) => {
+    const { scrollTop, clientHeight, scrollHeight } = event.target.documentElement;
+    if (scrollHeight - scrollTop <= clientHeight * 1.5) {
+      debouncedLoadMore();
+    }
+  }, [debouncedLoadMore]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   const handleSceneClick = (scene) => {
     navigate(`/article-analyzer/${scene.id}`, { state: { scene } });
@@ -54,9 +92,10 @@ function SceneList({ onLogout }) {
 
   const handleAddScene = async (data) => {
     try {
-      await scenarioApi.createScenario(data);
+      const newScenario = await scenarioApi.createScenario(data);
       setOpenAddDialog(false);
-      fetchScenarios();
+      // 直接更新状态，避免重新请求
+      setScenarios(prev => [newScenario, ...prev]);
     } catch (error) {
       console.error('创建场景失败:', error);
       setError(error.response?.data?.message || '创建场景失败');
@@ -103,6 +142,18 @@ function SceneList({ onLogout }) {
           </Grid>
         ))}
       </Grid>
+      
+      {hasMore && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Button 
+            variant="outlined"
+            onClick={() => setPage(prev => prev + 1)}
+            disabled={loading}
+          >
+            {loading ? '加载中...' : '加载更多'}
+          </Button>
+        </Box>
+      )}
     </Container>
   );
 

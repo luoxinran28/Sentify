@@ -29,10 +29,10 @@ class ScenarioService {
   async getScenarios(page = 1) {
     const offset = (page - 1) * ITEMS_PER_PAGE;
     
-    // 修改查询以包含文章数量
     const result = await query(
       `SELECT s.*, 
-        COUNT(a.id) as article_count
+        COUNT(a.id) as article_count,
+        COUNT(*) OVER() as total_count
        FROM scenarios s
        LEFT JOIN articles a ON s.id = a.scenario_id
        GROUP BY s.id
@@ -41,8 +41,7 @@ class ScenarioService {
       [ITEMS_PER_PAGE, offset]
     );
 
-    const countResult = await query('SELECT COUNT(*) FROM scenarios');
-    const totalItems = parseInt(countResult.rows[0].count);
+    const totalItems = result.rows[0]?.total_count || 0;
 
     return {
       scenarios: result.rows.map(row => ({
@@ -53,7 +52,7 @@ class ScenarioService {
         prompt: row.prompt,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        count: parseInt(row.article_count) // 添加文章数量
+        count: parseInt(row.article_count)
       })),
       pagination: {
         currentPage: page,

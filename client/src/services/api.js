@@ -55,10 +55,11 @@ const addAccessCodeHeader = (headers = {}) => {
 
 // 场景相关 API
 export const scenarioApi = {
-  getScenarios: (page = 1) => fetch(`${API_URL}/scenarios?page=${page}`, {
+  getScenarios: (page = 1, signal) => fetch(`${API_URL}/scenarios?page=${page}`, {
     headers: addAccessCodeHeader({
       'Content-Type': 'application/json'
-    })
+    }),
+    signal
   }).then(res => res.json()),
   
   createScenario: (data) => fetch(`${API_URL}/scenarios`, {
