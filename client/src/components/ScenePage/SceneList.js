@@ -15,6 +15,7 @@ import { scenarioApi } from '../../services/api';
 import SceneCard from './SceneCard';
 import Header from '../Header';
 import AddSceneDialog from './AddSceneDialog';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 
 function SceneList({ onLogout }) {
@@ -144,14 +145,17 @@ function SceneList({ onLogout }) {
       </Grid>
       
       {hasMore && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Button 
-            variant="outlined"
-            onClick={() => setPage(prev => prev + 1)}
-            disabled={loading}
-          >
-            {loading ? '加载中...' : '加载更多'}
-          </Button>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            mt: 4,
+            mb: 4,
+            cursor: loading ? 'default' : 'pointer'
+          }}
+          onClick={() => !loading && setPage(prev => prev + 1)}
+        >
+          <LoadingSpinner />
         </Box>
       )}
     </Container>
