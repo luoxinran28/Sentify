@@ -6,13 +6,24 @@ import {
   useMediaQuery,
   CircularProgress,
   Box,
-  Typography
+  Typography,
+  Card,
+  CardContent,
+  IconButton,
+  Tooltip,
+  CardActionArea
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { scenarioApi } from '../../services/api';
 import SceneCard from './SceneCard';
 import Header from '../Header';
 import AddSceneDialog from './AddSceneDialog';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Comment as CommentIcon,
+  Article as ArticleIcon
+} from '@mui/icons-material';
 
 function SceneList({ onLogout }) {
   const [scenarios, setScenarios] = useState([]);
@@ -48,12 +59,7 @@ function SceneList({ onLogout }) {
   }, []);
 
   const handleSceneClick = (scene) => {
-    navigate('/article-analyzer', { 
-      state: { 
-        scene: scene,
-        previousPath: window.location.pathname
-      } 
-    });
+    navigate(`/article-analyzer/${scene.id}`, { state: { scene } });
   };
 
   const handleAddScene = async (data) => {

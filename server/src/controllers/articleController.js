@@ -50,4 +50,20 @@ exports.clearArticles = async (req, res) => {
       details: error.message 
     });
   }
+};
+
+exports.getScenarioArticles = async (req, res) => {
+  try {
+    const { scenarioId } = req.params;
+    
+    // 获取场景的文章和分析结果
+    const data = await articleAnalysisService.getScenarioArticles(scenarioId);
+    
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ 
+      error: '获取场景文章失败',
+      details: error.message 
+    });
+  }
 }; 

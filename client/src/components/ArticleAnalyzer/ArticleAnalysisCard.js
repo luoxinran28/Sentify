@@ -98,18 +98,9 @@ const createHighlightedText = (text, highlights, options = {}) => {
   return <Typography sx={indented ? { pl: 3 } : undefined}>{parts}</Typography>;
 };
 
-const HighlightedText = ({ text, highlights, translatedHighlights }) => {
-  const getTranslatedWord = (highlight) => {
-    if (!translatedHighlights || !translatedHighlights[highlight.type]) return null;
-    const index = highlights[highlight.type].indexOf(highlight.word);
-    return translatedHighlights[highlight.type][index];
-  };
-
-  return createHighlightedText(text, highlights, {
-    showTranslation: true,
-    getTranslatedWord
-  });
-};
+const HighlightedText = ({ text, highlights, translatedHighlights }) => (
+  createHighlightedText(text, highlights)
+);
 
 const TranslatedHighlightedText = ({ text, highlights }) => (
   createHighlightedText(text, highlights, { indented: true })
@@ -150,11 +141,7 @@ function ArticleAnalysisCard({ result, article, index }) {
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               原文 {index}
             </Typography>
-            <HighlightedText 
-              text={article} 
-              highlights={highlights}
-              translatedHighlights={translatedHighlights}
-            />
+            {createHighlightedText(article, highlights)}
           </Box>
 
           <Divider />
@@ -170,10 +157,7 @@ function ArticleAnalysisCard({ result, article, index }) {
               <TranslateIcon fontSize="small" />
               翻译
             </Typography>
-            <TranslatedHighlightedText 
-              text={translation} 
-              highlights={translatedHighlights}
-            />
+            {createHighlightedText(translation, translatedHighlights, { indented: true })}
           </Box>
 
           <Divider />

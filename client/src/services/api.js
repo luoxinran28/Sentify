@@ -135,4 +135,16 @@ export const clearComments = async () => {
     const errorMessage = error.response?.data?.details || error.message;
     throw new Error(errorMessage);
   }
+};
+
+export const getScenarioArticles = async (scenarioId) => {
+  try {
+    const response = await fetch(`${API_URL}/articles/${scenarioId}`, {
+      headers: addAccessCodeHeader()
+    });
+    return response.json();
+  } catch (error) {
+    const errorMessage = error.response?.data?.details || error.message;
+    throw new Error(errorMessage);
+  }
 }; 

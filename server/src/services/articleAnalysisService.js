@@ -71,10 +71,9 @@ class ArticleAnalysisService {
   }
 
   async _saveAnalysisResults(articles, results, scenarioId) {
-    for (let i = 0; i < articles.length; i++) {
-      try {
-        await query('BEGIN');
-
+    try {
+      await query('BEGIN');
+      for (let i = 0; i < articles.length; i++) {
         // 保存文章
         const contentHash = this._generateContentHash(articles[i]);
         const articleResult = await query(
@@ -107,13 +106,12 @@ class ArticleAnalysisService {
             expiresAt
           ]
         );
-
-        await query('COMMIT');
-      } catch (error) {
-        await query('ROLLBACK');
-        console.error('保存分析结果错误:', error);
-        throw error;
       }
+      await query('COMMIT');
+    } catch (error) {
+      await query('ROLLBACK');
+      console.error('保存分析结果错误:', error);
+      throw error;
     }
   }
 
@@ -180,6 +178,57 @@ class ArticleAnalysisService {
       await query('COMMIT');
     } catch (error) {
       await query('ROLLBACK');
+      throw error;
+    }
+  }
+
+  async getScenarioArticles(scenarioId) {
+    try {
+      const result = await query(
+        `SELECT 
+          a.id as article_id,
+          a.content,
+          ar.sentiment,
+          ar.score,
+          ar.translation,
+          ar.highlights,
+          ar.translated_highlights as "translatedHighlights"
+         FROM articles a
+         LEFT JOIN analysis_results ar ON a.id = ar.article_id
+         WHERE a.scenario_id = $1
+         ORDER BY a.created_at DESC`,
+        [scenarioId]
+      );
+
+      const articles = result.rows;
+      
+      if (articles.length === 0) {
+        return { articles: [], results: null };
+      }
+
+      // 构造结果对象
+      const analysisResults = {
+        totalArticles: articles.length,
+        sentimentDistribution: this._calculateOverallSentiment(articles),
+        themes: this._generateThemesFromCache(articles),
+        individualResults: articles.map(article => ({
+          sentiment: article.sentiment,
+          score: article.score,
+          translation: article.translation,
+          highlights: article.highlights,
+          translatedHighlights: article.translatedHighlights
+        }))
+      };
+
+      return {
+        articles: articles.map(article => ({
+          id: article.article_id,
+          content: article.content
+        })),
+        results: analysisResults
+      };
+    } catch (error) {
+      console.error('获取场景文章错误:', error);
       throw error;
     }
   }

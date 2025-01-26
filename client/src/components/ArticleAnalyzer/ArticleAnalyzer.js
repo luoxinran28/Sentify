@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Container, 
   Box, 
@@ -14,14 +14,15 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
-import { useLocation } from 'react-router-dom';
-import { analyzeArticles, clearArticles } from '../../services/api';
+import { useLocation, useParams } from 'react-router-dom';
+import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/api';
 import AnalyzerHeader from './AnalyzerHeader';
 import AnalysisResults from './AnalysisResults';
 
 function ArticleAnalyzer() {
   const location = useLocation();
   const { scene } = location.state || {};
+  const { scenarioId } = useParams();
   const [articles, setArticles] = useState([{ text: '' }]);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,33 @@ function ArticleAnalyzer() {
   });
 
   const fileInputRef = useRef(null);
+
+  const loadScenarioArticles = async () => {
+    try {
+      setLoading(true);
+      const data = await getScenarioArticles(scenarioId);
+      
+      if (data.articles && data.articles.length > 0) {
+        setArticles(data.articles.map(article => ({ text: article.content })));
+        setResults(data.results);
+      }
+    } catch (error) {
+      console.error('加载场景文章错误:', error);
+      setSnackbar({
+        open: true,
+        message: '加载场景文章失败',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (scenarioId) {
+      loadScenarioArticles();
+    }
+  }, [scenarioId]);
 
   const handleArticleChange = (index, value) => {
     const newArticles = [...articles];

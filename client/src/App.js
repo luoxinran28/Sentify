@@ -88,7 +88,7 @@ function App() {
             } 
           />
           <Route 
-            path="/article-analyzer" 
+            path="/article-analyzer/:scenarioId" 
             element={
               isAuthenticated ? (
                 <ArticleAnalyzer />

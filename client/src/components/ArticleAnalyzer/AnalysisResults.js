@@ -23,7 +23,6 @@ import ArticleAnalysisCard from './ArticleAnalysisCard';
 function AnalysisResults({ results, articles }) {
   const [expandedSection, setExpandedSection] = useState('overview');
   const { sentimentDistribution, themes = [], individualResults = [] } = results;
-  const totalArticles = articles.length;
 
   const handleAccordionChange = (panel) => (_, isExpanded) => {
     setExpandedSection(isExpanded ? panel : false);
@@ -68,13 +67,13 @@ function AnalysisResults({ results, articles }) {
                   ({count}条)
                 </Typography>
                 <Tooltip 
-                  title={`占比 ${((count / totalArticles) * 100).toFixed(1)}%`}
+                  title={`占比 ${((count / articles.length) * 100).toFixed(1)}%`}
                   placement="right"
                   arrow
                 >
                   <LinearProgress
                     variant="determinate"
-                    value={(count / totalArticles) * 100}
+                    value={(count / articles.length) * 100}
                     color={sentiment === 'positive' ? 'success' : sentiment === 'negative' ? 'error' : 'primary'}
                     sx={{ height: 8, borderRadius: 4 }}
                   />
@@ -114,13 +113,13 @@ function AnalysisResults({ results, articles }) {
                   {theme} ({count}条)
                 </Typography>
                 <Tooltip 
-                  title={`占比 ${((count / totalArticles) * 100).toFixed(1)}%`}
+                  title={`占比 ${((count / articles.length) * 100).toFixed(1)}%`}
                   placement="right"
                   arrow
                 >
                   <LinearProgress
                     variant="determinate"
-                    value={(count / totalArticles) * 100}
+                    value={(count / articles.length) * 100}
                     color={sentiment === 'positive' ? 'success' : sentiment === 'negative' ? 'error' : 'primary'}
                     sx={{ height: 8, borderRadius: 4 }}
                   />
