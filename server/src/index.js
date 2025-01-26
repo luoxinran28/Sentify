@@ -3,7 +3,6 @@ const cors = require('cors');
 const path = require('path');
 const scenarioRoutes = require('./routes/scenarioRoutes');
 const authRoutes = require('./routes/authRoutes');
-const commentRoutes = require('./routes/commentRoutes');
 const articleRoutes = require('./routes/articleRoutes');
 const db = require('./services/postgresService');
 const { authenticateUser } = require('./middleware/auth');
@@ -19,8 +18,6 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 // 场景路由
 app.use('/api/scenarios', scenarioRoutes);
-// 评论分析路由
-app.use('/api/comments', commentRoutes);
 // 文章分析路由
 app.use('/api/articles', articleRoutes);
 

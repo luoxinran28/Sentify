@@ -117,26 +117,6 @@ export const clearArticles = async (scenarioId) => {
   }
 };
 
-export const analyzeComments = async (comments) => {
-  try {
-    const response = await api.post('/comments/analyze', { comments });
-    return response.data;
-  } catch (error) {
-    const errorMessage = error.response?.data?.details || error.message;
-    throw new Error(errorMessage);
-  }
-};
-
-export const clearComments = async () => {
-  try {
-    const response = await api.post('/comments/clear');
-    return response.data;
-  } catch (error) {
-    const errorMessage = error.response?.data?.details || error.message;
-    throw new Error(errorMessage);
-  }
-};
-
 export const getScenarioArticles = async (scenarioId) => {
   try {
     const response = await fetch(`${API_URL}/articles/${scenarioId}`, {

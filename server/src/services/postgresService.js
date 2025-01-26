@@ -67,43 +67,12 @@ class DatabaseService {
   async initDatabase() {
     const client = await pool.connect();
     try {
-      // 开始事务
       await client.query('BEGIN');
 
-      // 创建评论表
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS comments (
-          id SERIAL PRIMARY KEY,
-          content TEXT NOT NULL,
-          content_hash TEXT UNIQUE NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      // 创建分析结果表
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS analysis_results (
-          id SERIAL PRIMARY KEY,
-          comment_id INTEGER NOT NULL,
-          sentiment TEXT NOT NULL,
-          score REAL NOT NULL,
-          translation TEXT NOT NULL,
-          highlights JSONB NOT NULL,
-          translated_highlights JSONB NOT NULL,
-          keywords JSONB NOT NULL,
-          summary TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          expires_at TIMESTAMP,
-          FOREIGN KEY (comment_id) REFERENCES comments(id)
-        )
-      `);
-
       // 创建索引
-      await client.query('CREATE INDEX IF NOT EXISTS idx_content_hash ON comments(content_hash)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_content_hash ON articles(content_hash)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_expires_at ON analysis_results(expires_at)');
 
-      // 提交事务
       await client.query('COMMIT');
       console.log('数据库初始化成功');
     } catch (error) {
@@ -121,7 +90,7 @@ class DatabaseService {
       const result = await pool.query(
         `SELECT ar.* 
          FROM analysis_results ar
-         JOIN comments c ON ar.comment_id = c.id
+         JOIN articles c ON ar.article_id = c.id
          WHERE c.content_hash = $1 
            AND (ar.expires_at IS NULL OR ar.expires_at > NOW())`,
         [hash]
@@ -152,27 +121,27 @@ class DatabaseService {
     try {
       await client.query('BEGIN');
 
-      // 插入或获取评论
-      const commentResult = await client.query(
-        `INSERT INTO comments (content, content_hash)
+      // 插入或获取文章
+      const articleResult = await client.query(
+        `INSERT INTO articles (content, content_hash)
          VALUES ($1, $2)
          ON CONFLICT (content_hash) DO UPDATE SET updated_at = NOW()
          RETURNING id`,
         [content, hash]
       );
 
-      const commentId = commentResult.rows[0].id;
+      const articleId = articleResult.rows[0].id;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
       // 插入分析结果
       await client.query(
         `INSERT INTO analysis_results (
-          comment_id, sentiment, score, translation,
+          article_id, sentiment, score, translation,
           highlights, translated_highlights, keywords, summary, expires_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
-          commentId,
+          articleId,
           result.sentiment,
           result.score,
           result.translation,
@@ -208,7 +177,7 @@ class DatabaseService {
     }
   }
 
-  async clearComments() {
+  async clearArticles() {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -216,14 +185,14 @@ class DatabaseService {
       // 清空分析结果表
       await client.query('DELETE FROM analysis_results');
       
-      // 清空评论表
-      await client.query('DELETE FROM comments');
+      // 清空文章表
+      await client.query('DELETE FROM articles');
       
       await client.query('COMMIT');
       return { success: true };
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('清空评论数据失败:', error);
+      console.error('清空文章数据失败:', error);
       throw error;
     } finally {
       client.release();

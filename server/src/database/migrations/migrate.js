@@ -28,7 +28,7 @@ const createTables = `
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
-  -- 创建文章表（替代原 comments 表）
+  -- 创建文章表
   CREATE TABLE IF NOT EXISTS articles (
     id SERIAL PRIMARY KEY,
     scenario_id INTEGER NOT NULL,

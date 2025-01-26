@@ -2,20 +2,20 @@ const axios = require('axios');
 const { COMMENT_ANALYSIS_PROMPT } = require('../prompts/commentAnalysis');
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const MAX_COMMENTS = 20;
-const MAX_COMMENT_LENGTH = 1000;
+const MAX_ARTICLES = 20;
+const MAX_ARTICLE_LENGTH = 1000;
 
 class DeepseekService {
-  async analyze(comments) {
+  async analyze(articles) {
     try {
-      // 验证评论数量和长度
-      if (comments.length > MAX_COMMENTS) {
-        throw new Error(`评论数量超过限制 (最大${MAX_COMMENTS}条)`);
+      // 验证文章数量和长度
+      if (articles.length > MAX_ARTICLES) {
+        throw new Error(`文章数量超过限制 (最大${MAX_ARTICLES}条)`);
       }
 
-      const tooLongComments = comments.filter(c => c.length > MAX_COMMENT_LENGTH);
-      if (tooLongComments.length > 0) {
-        throw new Error(`评论长度超过限制 (最大${MAX_COMMENT_LENGTH}字符)`);
+      const tooLongArticles = articles.filter(a => a.length > MAX_ARTICLE_LENGTH);
+      if (tooLongArticles.length > 0) {
+        throw new Error(`文章长度超过限制 (最大${MAX_ARTICLE_LENGTH}字符)`);
       }
 
       const response = await axios.post(
@@ -29,7 +29,7 @@ class DeepseekService {
             },
             {
               role: "user",
-              content: JSON.stringify(comments)
+              content: JSON.stringify(articles)
             }
           ],
           temperature: 0.1,
@@ -51,7 +51,7 @@ class DeepseekService {
     } catch (error) {
       console.error('DeepSeek API 错误:', error);
       if (error.code === 'ECONNABORTED') {
-        throw new Error('分析超时，请减少评论数量或长度后重试');
+        throw new Error('分析超时，请减少文章数量或长度后重试');
       }
       throw new Error(`API 调用失败: ${error.message}`);
     }
@@ -76,7 +76,7 @@ class DeepseekService {
         negative: Array.isArray(analysis.translatedHighlights?.negative) ? analysis.translatedHighlights.negative : []
       },
       keywords: Array.isArray(analysis.keywords) ? analysis.keywords : [],
-      summary: analysis.summary || '暂无评论总结'
+      summary: analysis.summary || '暂无文章总结'
     }));
 
     // 确保主题分析存在

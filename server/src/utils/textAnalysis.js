@@ -3,16 +3,16 @@ const tokenizer = new natural.WordTokenizer();
 const TfIdf = natural.TfIdf;
 
 // 关键词提取
-exports.extractKeywords = (comments) => {
+exports.extractKeywords = (articles) => {
   const tfidf = new TfIdf();
   
-  // 添加所有评论到 TF-IDF
-  comments.forEach(comment => tfidf.addDocument(comment));
+  // 添加所有文章到 TF-IDF
+  articles.forEach(article => tfidf.addDocument(article));
   
   // 获取关键词
   const keywords = new Map();
   
-  comments.forEach((_, docIndex) => {
+  articles.forEach((_, docIndex) => {
     tfidf.listTerms(docIndex).slice(0, 5).forEach(item => {
       const { term, tfidf: score } = item;
       if (term.length > 1) { // 忽略单字符词
@@ -29,11 +29,11 @@ exports.extractKeywords = (comments) => {
 };
 
 // 主题分析
-exports.analyzeThemes = (comments) => {
+exports.analyzeThemes = (articles) => {
   const themes = new Map();
   
-  comments.forEach(comment => {
-    const tokens = tokenizer.tokenize(comment.toLowerCase());
+  articles.forEach(article => {
+    const tokens = tokenizer.tokenize(article.toLowerCase());
     
     // 简单的主题规则
     if (tokens.some(t => ['价格', '贵', '便宜', '实惠'].includes(t))) {
@@ -51,7 +51,7 @@ exports.analyzeThemes = (comments) => {
     .map(([theme, count]) => ({
       theme,
       count,
-      percentage: (count / comments.length * 100).toFixed(1)
+      percentage: (count / articles.length * 100).toFixed(1)
     }));
 };
 
