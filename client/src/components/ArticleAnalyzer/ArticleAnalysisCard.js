@@ -16,54 +16,110 @@ import {
 } from '@mui/icons-material';
 
 // 抽取通用的高亮文本处理逻辑
-const createHighlightedText = (text, highlights, translatedHighlights) => {
-  if (!highlights || !translatedHighlights) return text;
+const createHighlightedText = (text, highlights, options = {}) => {
+  const {
+    showTranslation = false,
+    getTranslatedWord = null,
+    indented = false
+  } = options;
+
+  // 确保highlights对象及其属性存在
+  const safeHighlights = {
+    positive: (highlights?.positive || []),
+    negative: (highlights?.negative || [])
+  };
+
+  if (!highlights || (!safeHighlights.positive.length && !safeHighlights.negative.length)) {
+    return <Typography sx={indented ? { pl: 3 } : undefined}>{text}</Typography>;
+  }
 
   const allHighlights = [
-    ...Object.entries(highlights).flatMap(([type, phrases]) =>
-      phrases.map(phrase => ({ phrase, type }))
-    ),
-    ...Object.entries(translatedHighlights).flatMap(([type, phrases]) =>
-      phrases.map(phrase => ({ phrase, type }))
-    )
-  ];
+    ...safeHighlights.positive.map(word => ({ word, type: 'positive' })),
+    ...safeHighlights.negative.map(word => ({ word, type: 'negative' }))
+  ].sort((a, b) => {
+    const indexA = text.toLowerCase().indexOf(a.word.toLowerCase());
+    const indexB = text.toLowerCase().indexOf(b.word.toLowerCase());
+    return indexA - indexB;
+  });
 
-  // 按长度降序排序，确保较长的短语先被处理
-  allHighlights.sort((a, b) => b.phrase.length - a.phrase.length);
+  let lastIndex = 0;
+  const parts = [];
 
-  let result = text;
-  let placeholders = [];
-
-  // 使用占位符替换高亮文本
   allHighlights.forEach((highlight, index) => {
-    const placeholder = `__HIGHLIGHT_${index}__`;
-    const regex = new RegExp(highlight.phrase, 'gi');
-    if (regex.test(result)) {
-      result = result.replace(regex, placeholder);
-      placeholders.push({
-        placeholder,
-        text: highlight.phrase,
-        type: highlight.type
-      });
+    const wordIndex = text.toLowerCase().indexOf(highlight.word.toLowerCase());
+    if (wordIndex === -1) return;
+
+    if (wordIndex > lastIndex) {
+      parts.push(
+        <span key={`text-${index}`}>
+          {text.substring(lastIndex, wordIndex)}
+        </span>
+      );
     }
+
+    const translatedWord = showTranslation && getTranslatedWord ? 
+      getTranslatedWord(highlight) : null;
+
+    const tooltipTitle = translatedWord
+      ? `${highlight.type === 'positive' ? '积极表达' : '消极表达'}: ${translatedWord}`
+      : highlight.type === 'positive' ? '积极表达' : '消极表达';
+
+    parts.push(
+      <Tooltip
+        key={`highlight-${index}`}
+        title={tooltipTitle}
+        arrow
+      >
+        <Box
+          component="span"
+          sx={{
+            backgroundColor: highlight.type === 'positive' ? 'success.light' : 'error.light',
+            px: 0.5,
+            borderRadius: 0.5,
+            color: 'white',
+            cursor: 'help'
+          }}
+        >
+          {text.substr(wordIndex, highlight.word.length)}
+        </Box>
+      </Tooltip>
+    );
+    lastIndex = wordIndex + highlight.word.length;
   });
 
-  // 将占位符替换为带样式的文本
-  placeholders.forEach(({ placeholder, text, type }) => {
-    const color = type === 'positive' ? '#4caf50' : type === 'negative' ? '#f44336' : '#2196f3';
-    const styledText = `<span style="color: ${color}; font-weight: 500;">${text}</span>`;
-    result = result.replace(placeholder, styledText);
-  });
+  if (lastIndex < text.length) {
+    parts.push(
+      <span key="text-end">
+        {text.substring(lastIndex)}
+      </span>
+    );
+  }
 
-  return <div dangerouslySetInnerHTML={{ __html: result }} />;
+  return <Typography sx={indented ? { pl: 3 } : undefined}>{parts}</Typography>;
 };
+
+const HighlightedText = ({ text, highlights, translatedHighlights }) => {
+  const getTranslatedWord = (highlight) => {
+    if (!translatedHighlights || !translatedHighlights[highlight.type]) return null;
+    const index = highlights[highlight.type].indexOf(highlight.word);
+    return translatedHighlights[highlight.type][index];
+  };
+
+  return createHighlightedText(text, highlights, {
+    showTranslation: true,
+    getTranslatedWord
+  });
+};
+
+const TranslatedHighlightedText = ({ text, highlights }) => (
+  createHighlightedText(text, highlights, { indented: true })
+);
 
 function ArticleAnalysisCard({ result, article, index }) {
   const {
     sentiment,
     score,
     translation,
-    summary,
     highlights,
     translatedHighlights
   } = result;
@@ -80,14 +136,9 @@ function ArticleAnalysisCard({ result, article, index }) {
   };
 
   const getSentimentColor = () => {
-    switch (sentiment) {
-      case 'positive':
-        return 'success';
-      case 'negative':
-        return 'error';
-      default:
-        return 'primary';
-    }
+    if (score >= 0.6) return 'success.main';
+    if (score <= 0.4) return 'error.main';
+    return 'text.primary';
   };
 
   return (
@@ -99,9 +150,11 @@ function ArticleAnalysisCard({ result, article, index }) {
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               原文 {index}
             </Typography>
-            <Typography variant="body1">
-              {createHighlightedText(article, highlights)}
-            </Typography>
+            <HighlightedText 
+              text={article} 
+              highlights={highlights}
+              translatedHighlights={translatedHighlights}
+            />
           </Box>
 
           <Divider />
@@ -117,9 +170,10 @@ function ArticleAnalysisCard({ result, article, index }) {
               <TranslateIcon fontSize="small" />
               翻译
             </Typography>
-            <Typography variant="body1">
-              {createHighlightedText(translation, translatedHighlights)}
-            </Typography>
+            <TranslatedHighlightedText 
+              text={translation} 
+              highlights={translatedHighlights}
+            />
           </Box>
 
           <Divider />
@@ -129,19 +183,9 @@ function ArticleAnalysisCard({ result, article, index }) {
             <Chip
               icon={getSentimentIcon()}
               label={`情感得分: ${(score * 100).toFixed()}%`}
-              color={getSentimentColor()}
+              color={score >= 0.6 ? 'success' : score <= 0.4 ? 'error' : 'default'}
               variant="outlined"
             />
-          </Box>
-
-          {/* 摘要 */}
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              摘要
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {summary}
-            </Typography>
           </Box>
         </Box>
       </CardContent>

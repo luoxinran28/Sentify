@@ -46,7 +46,13 @@ class ArticleAnalysisService {
         try {
           const contentHash = this._generateContentHash(article);
           const result = await query(
-            `SELECT ar.* FROM analysis_results ar
+            `SELECT 
+              ar.sentiment,
+              ar.score,
+              ar.translation,
+              ar.highlights,
+              ar.translated_highlights as "translatedHighlights"
+             FROM analysis_results ar
              JOIN articles a ON ar.article_id = a.id
              WHERE a.content_hash = $1 
              AND a.scenario_id = $2
