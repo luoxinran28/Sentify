@@ -1,4 +1,5 @@
 const articleAnalysisService = require('../services/articleAnalysisService');
+const articleService = require('../services/articleService');
 
 exports.analyzeArticles = async (req, res) => {
   try {
@@ -65,5 +66,23 @@ exports.getScenarioArticles = async (req, res) => {
       error: '获取场景文章失败',
       details: error.message 
     });
+  }
+};
+
+exports.getArticles = async (req, res) => {
+  try {
+    const { scenarioId } = req.params;
+    const { page = 1, limit = 5 } = req.query;
+    
+    const result = await articleService.getArticlesByScenario(
+      scenarioId,
+      parseInt(page),
+      parseInt(limit)
+    );
+    
+    res.json(result);
+  } catch (error) {
+    console.error('获取文章失败:', error);
+    res.status(500).json({ message: error.message });
   }
 }; 

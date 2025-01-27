@@ -17,6 +17,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/api';
 import AnalyzerHeader from './AnalyzerHeader';
 import { Overview, ThemeAnalysis, ArticleAnalysisCard } from './AnalysisResults';
+import InfiniteScroll from '../common/InfiniteScroll';
 
 function ArticleAnalyzer() {
   const location = useLocation();
@@ -31,17 +32,31 @@ function ArticleAnalyzer() {
     severity: 'success'
   });
   const [currentTab, setCurrentTab] = useState('articles');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const fileInputRef = useRef(null);
 
-  const loadScenarioArticles = async () => {
+  const loadScenarioArticles = async (pageNum) => {
     try {
       setLoading(true);
-      const data = await getScenarioArticles(scenarioId);
+      const data = await getScenarioArticles(scenarioId, pageNum);
       
       if (data.articles && data.articles.length > 0) {
-        setArticles(data.articles.map(article => ({ text: article.content })));
-        setResults(data.results);
+        if (pageNum === 1) {
+          setArticles(data.articles.map(article => ({ text: article.content })));
+        } else {
+          setArticles(prev => [
+            ...prev,
+            ...data.articles.map(article => ({ text: article.content }))
+          ]);
+        }
+        
+        setHasMore(data.pagination.currentPage < data.pagination.totalPages);
+        
+        if (data.results) {
+          setResults(data.results);
+        }
       }
     } catch (error) {
       console.error('加载场景文章错误:', error);
@@ -57,7 +72,7 @@ function ArticleAnalyzer() {
 
   useEffect(() => {
     if (scenarioId) {
-      loadScenarioArticles();
+      loadScenarioArticles(1);
     }
   }, [scenarioId]);
 
@@ -221,72 +236,88 @@ function ArticleAnalyzer() {
     setCurrentTab(newValue);
   };
 
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (page > 1) {
+      loadScenarioArticles(page);
+    }
+  }, [page]);
+
   const renderContent = () => {
     switch (currentTab) {
       case 'articles':
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {articles.map((article, index) => (
-              <Box 
-                key={index} 
-                sx={{ 
-                  display: 'flex', 
-                  gap: 1, 
-                  alignItems: 'flex-start'
-                }}
-              >
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center',
-                  pt: 1
-                }}>
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary"
-                    sx={{ mb: 1 }}
-                  >
-                    {index + 1}
-                  </Typography>
-                  {articles.length > 1 && (
-                    <IconButton
-                      onClick={() => handleRemoveArticle(index)}
-                      disabled={loading}
-                      color="error"
-                      size="small"
-                    >
-                      <RemoveIcon />
-                    </IconButton>
-                  )}
-                </Box>
-                <TextField
-                  multiline
-                  minRows={4}
-                  maxRows={6}
-                  value={article.text}
-                  onChange={(e) => handleArticleChange(index, e.target.value)}
-                  placeholder={`请输入内容...`}
-                  variant="outlined"
-                  fullWidth
-                  disabled={loading}
-                  sx={{
-                    '& .MuiInputBase-root': {
-                      minHeight: { xs: '120px', sm: '150px' }
-                    }
+          <InfiniteScroll
+            loading={loading}
+            hasMore={hasMore}
+            onLoadMore={handleLoadMore}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {articles.map((article, index) => (
+                <Box 
+                  key={index} 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1, 
+                    alignItems: 'flex-start'
                   }}
-                />
-              </Box>
-            ))}
+                >
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    pt: 1
+                  }}>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      {index + 1}
+                    </Typography>
+                    {articles.length > 1 && (
+                      <IconButton
+                        onClick={() => handleRemoveArticle(index)}
+                        disabled={loading}
+                        color="error"
+                        size="small"
+                      >
+                        <RemoveIcon />
+                      </IconButton>
+                    )}
+                  </Box>
+                  <TextField
+                    multiline
+                    minRows={4}
+                    maxRows={6}
+                    value={article.text}
+                    onChange={(e) => handleArticleChange(index, e.target.value)}
+                    placeholder={`请输入内容...`}
+                    variant="outlined"
+                    fullWidth
+                    disabled={loading}
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        minHeight: { xs: '120px', sm: '150px' }
+                      }
+                    }}
+                  />
+                </Box>
+              ))}
 
-            <Button
-              variant="contained"
-              onClick={handleAnalyze}
-              disabled={loading}
-              sx={{ alignSelf: 'flex-end', mt: 2 }}
-            >
-              开始分析
-            </Button>
-          </Box>
+              <Button
+                variant="contained"
+                onClick={handleAnalyze}
+                disabled={loading}
+                sx={{ alignSelf: 'flex-end', mt: 2 }}
+              >
+                开始分析
+              </Button>
+            </Box>
+          </InfiniteScroll>
         );
       case 'overview':
         return results && (

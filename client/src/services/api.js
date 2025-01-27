@@ -118,14 +118,24 @@ export const clearArticles = async (scenarioId) => {
   }
 };
 
-export const getScenarioArticles = async (scenarioId) => {
+export const getScenarioArticles = async (scenarioId, page = 1, limit = 5) => {
   try {
-    const response = await fetch(`${API_URL}/articles/${scenarioId}`, {
-      headers: addAccessCodeHeader()
-    });
+    const response = await fetch(
+      `${API_URL}/scenarios/${scenarioId}/articles?page=${page}&limit=${limit}`,
+      {
+        headers: addAccessCodeHeader({
+          'Content-Type': 'application/json'
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error('获取文章失败');
+    }
+    
     return response.json();
   } catch (error) {
-    const errorMessage = error.response?.data?.details || error.message;
-    throw new Error(errorMessage);
+    console.error('获取文章错误:', error);
+    throw error;
   }
 }; 

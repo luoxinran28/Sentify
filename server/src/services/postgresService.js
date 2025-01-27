@@ -36,28 +36,79 @@ const parseDbUrl = (url) => {
   }
 };
 
-// 创建数据库连接池
-const createPool = () => {
+// 创建数据库连接池配置
+const createPoolConfig = () => {
   try {
     const dbUrl = validateDbUrl();
     const config = parseDbUrl(dbUrl);
-    return new Pool(config);
+    return {
+      ...config,
+      max: 20, // 最大连接数
+      idleTimeoutMillis: 30000, // 连接最大空闲时间
+      connectionTimeoutMillis: 2000, // 连接超时时间
+      maxUses: 7500, // 每个连接最大使用次数
+      allowExitOnIdle: true
+    };
   } catch (error) {
-    console.error('创建数据库连接池失败:', error);
+    console.error('创建数据库配置失败:', error);
     throw error;
   }
 };
 
-const pool = createPool();
+let pool;
 
-// 测试连接
-pool.on('error', (err) => {
-  console.error('数据库连接池错误:', err);
-});
+// 创建或获取连接池
+const getPool = () => {
+  if (!pool) {
+    pool = new Pool(createPoolConfig());
+    
+    // 错误处理
+    pool.on('error', (err, client) => {
+      console.error('数据库连接池错误:', err);
+      console.error('发生错误的客户端:', client);
+    });
 
-pool.on('connect', () => {
-  console.log('数据库连接成功');
-});
+    pool.on('connect', () => {
+      console.log('新的数据库连接已建立');
+    });
+
+    pool.on('remove', () => {
+      console.log('数据库连接已关闭');
+    });
+  }
+  return pool;
+};
+
+// 执行查询的包装函数，包含重试逻辑
+const executeQuery = async (text, params, retries = 3) => {
+  let lastError;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await getPool().connect();
+      try {
+        const result = await client.query(text, params);
+        return result;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      lastError = error;
+      console.error(`查询执行失败 (尝试 ${i + 1}/${retries}):`, error);
+      
+      if (error.code === 'ECONNREFUSED' || error.code === '57P01') {
+        // 如果是连接错误，重新创建连接池
+        pool = null;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 延迟重试
+        continue;
+      }
+      
+      throw error; // 对于其他错误直接抛出
+    }
+  }
+  
+  throw lastError;
+};
 
 class DatabaseService {
   generateHash(content) {
@@ -65,7 +116,7 @@ class DatabaseService {
   }
 
   async initDatabase() {
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
       await client.query('BEGIN');
 
@@ -86,16 +137,14 @@ class DatabaseService {
 
   async findAnalysisByContent(content) {
     const hash = this.generateHash(content);
-    try {
-      const result = await pool.query(
-        `SELECT ar.* 
-         FROM analysis_results ar
-         JOIN articles c ON ar.article_id = c.id
-         WHERE c.content_hash = $1 
-           AND (ar.expires_at IS NULL OR ar.expires_at > NOW())`,
-        [hash]
-      );
-      
+    return executeQuery(
+      `SELECT ar.* 
+       FROM analysis_results ar
+       JOIN articles c ON ar.article_id = c.id
+       WHERE c.content_hash = $1 
+         AND (ar.expires_at IS NULL OR ar.expires_at > NOW())`,
+      [hash]
+    ).then(result => {
       if (result.rows[0]) {
         const row = result.rows[0];
         return {
@@ -109,15 +158,12 @@ class DatabaseService {
         };
       }
       return null;
-    } catch (error) {
-      console.error('查询分析结果失败:', error);
-      throw error;
-    }
+    });
   }
 
   async saveAnalysis(content, result) {
     const hash = this.generateHash(content);
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
       await client.query('BEGIN');
 
@@ -178,7 +224,7 @@ class DatabaseService {
   }
 
   async clearArticles() {
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
       await client.query('BEGIN');
       
@@ -200,4 +246,25 @@ class DatabaseService {
   }
 }
 
-module.exports = new DatabaseService(); 
+// 导出的查询函数现在使用新的执行器
+const query = (text, params) => executeQuery(text, params);
+
+// 初始化数据库
+const initDatabase = async () => {
+  try {
+    await query('SELECT NOW()');
+    console.log('数据库连接测试成功');
+  } catch (error) {
+    console.error('数据库初始化失败:', error);
+    throw error;
+  }
+};
+
+const dbService = new DatabaseService();
+
+module.exports = {
+  initDatabase,
+  query,
+  getPool,
+  dbService
+}; 
