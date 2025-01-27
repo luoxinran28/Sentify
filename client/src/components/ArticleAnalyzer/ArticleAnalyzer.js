@@ -6,18 +6,16 @@ import {
   TextField, 
   Button, 
   IconButton,
-  Typography,
   Snackbar,
   Alert,
-  Input,
-  CircularProgress
+  Input
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { useLocation, useParams } from 'react-router-dom';
 import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/api';
 import AnalyzerHeader from './AnalyzerHeader';
-import AnalysisResults from './AnalysisResults';
+import { Overview, ThemeAnalysis, ArticleAnalysisCard } from './AnalysisResults';
 
 function ArticleAnalyzer() {
   const location = useLocation();
@@ -31,6 +29,7 @@ function ArticleAnalyzer() {
     message: '',
     severity: 'success'
   });
+  const [currentTab, setCurrentTab] = useState('articles');
 
   const fileInputRef = useRef(null);
 
@@ -217,15 +216,14 @@ function ArticleAnalyzer() {
     event.target.value = '';
   };
 
-  return (
-    <>
-      <AnalyzerHeader 
-        onUpload={handleUpload} 
-        onClearCache={handleClearArticles}
-        sceneTitle={scene?.title_zh}
-      />
-      <Container maxWidth="md">
-        <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  const renderContent = () => {
+    switch (currentTab) {
+      case 'articles':
+        return (
           <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {articles.map((article, index) => (
@@ -272,8 +270,46 @@ function ArticleAnalyzer() {
               </Button>
             </Box>
           </Paper>
+        );
+      case 'overview':
+        return results && (
+          <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Overview results={results} articles={articles} />
+              <ThemeAnalysis results={results} articles={articles} />
+            </Box>
+          </Paper>
+        );
+      case 'analysis':
+        return results && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {results.individualResults.map((result, index) => (
+              <ArticleAnalysisCard
+                key={index}
+                result={result}
+                article={articles[index].text}
+                index={index + 1}
+              />
+            ))}
+          </Box>
+        );
+      default:
+        return null;
+    }
+  };
 
-          {results && <AnalysisResults results={results} articles={articles} />}
+  return (
+    <>
+      <AnalyzerHeader 
+        onUpload={handleUpload} 
+        onClearCache={handleClearArticles}
+        sceneTitle={scene?.title_zh}
+        currentTab={currentTab}
+        onTabChange={handleTabChange}
+      />
+      <Container maxWidth="md">
+        <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {renderContent()}
         </Box>
       </Container>
 
