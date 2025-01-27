@@ -16,6 +16,7 @@ import SceneCard from './SceneCard';
 import Header from '../Header';
 import AddSceneDialog from './AddSceneDialog';
 import LoadingSpinner from '../common/LoadingSpinner';
+import InfiniteScroll from '../common/InfiniteScroll';
 
 
 function SceneList({ onLogout }) {
@@ -57,14 +58,9 @@ function SceneList({ onLogout }) {
     }
   }, []);
 
-  const debouncedLoadMore = useCallback(
-    debounce(() => {
-      if (!loading && hasMore) {
-        setPage(prev => prev + 1);
-      }
-    }, 300),
-    [loading, hasMore]
-  );
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
+  };
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -74,18 +70,6 @@ function SceneList({ onLogout }) {
       abortController.abort(); // 组件卸载时取消请求
     };
   }, [page, loadScenarios]);
-
-  const handleScroll = useCallback((event) => {
-    const { scrollTop, clientHeight, scrollHeight } = event.target.documentElement;
-    if (scrollHeight - scrollTop <= clientHeight * 1.5) {
-      debouncedLoadMore();
-    }
-  }, [debouncedLoadMore]);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
 
   const handleSceneClick = (scene) => {
     navigate(`/article-analyzer/${scene.id}`, { state: { scene } });
@@ -115,7 +99,7 @@ function SceneList({ onLogout }) {
     }
   ];
 
-  const content = loading ? (
+  const content = loading && page === 1 ? (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
       <CircularProgress />
     </Box>
@@ -125,39 +109,31 @@ function SceneList({ onLogout }) {
     </Box>
   ) : (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Grid container spacing={3}>
-        {scenarios.map((scene) => (
-          <Grid item xs={getGridCols()} key={scene.id}>
-            <SceneCard 
-              scene={{
-                id: scene.id,
-                titleEn: scene.titleEn,
-                titleCn: scene.titleZh,
-                source: scene.source,
-                hasLink: true,
-                prompt: scene.prompt,
-                count: scene.count
-              }}
-              onClick={() => handleSceneClick(scene)}
-            />
-          </Grid>
-        ))}
-      </Grid>
-      
-      {hasMore && (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            mt: 4,
-            mb: 4,
-            cursor: loading ? 'default' : 'pointer'
-          }}
-          onClick={() => !loading && setPage(prev => prev + 1)}
-        >
-          <LoadingSpinner />
-        </Box>
-      )}
+      <InfiniteScroll
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        loadingSpinner={<LoadingSpinner />}
+      >
+        <Grid container spacing={3}>
+          {scenarios.map((scene) => (
+            <Grid item xs={getGridCols()} key={scene.id}>
+              <SceneCard 
+                scene={{
+                  id: scene.id,
+                  titleEn: scene.titleEn,
+                  titleCn: scene.titleZh,
+                  source: scene.source,
+                  hasLink: true,
+                  prompt: scene.prompt,
+                  count: scene.count
+                }}
+                onClick={() => handleSceneClick(scene)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      </InfiniteScroll>
     </Container>
   );
 
