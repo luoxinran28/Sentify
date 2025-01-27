@@ -43,20 +43,20 @@ function ArticleAnalyzer() {
       const data = await getScenarioArticles(scenarioId, pageNum);
       
       if (data.articles && data.articles.length > 0) {
+        const newArticles = data.articles.map(article => ({ 
+          text: article.content,
+          analyzed: false
+        }));
+
         if (pageNum === 1) {
-          setArticles(data.articles.map(article => ({ text: article.content })));
+          setArticles(newArticles);
         } else {
-          setArticles(prev => [
-            ...prev,
-            ...data.articles.map(article => ({ text: article.content }))
-          ]);
+          setArticles(prev => [...prev, ...newArticles]);
         }
         
         setHasMore(data.pagination.currentPage < data.pagination.totalPages);
         
-        if (data.results) {
-          setResults(data.results);
-        }
+        analyzeNewArticles(newArticles);
       }
     } catch (error) {
       console.error('加载场景文章错误:', error);
@@ -67,6 +67,56 @@ function ArticleAnalyzer() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const analyzeNewArticles = async (newArticles) => {
+    try {
+      const validArticles = newArticles
+        .map(a => a.text)
+        .filter(text => text.trim());
+
+      if (validArticles.length === 0) return;
+
+      const result = await analyzeArticles(validArticles, scene.id);
+      
+      setArticles(prevArticles => {
+        const updatedArticles = [...prevArticles];
+        let analysisIndex = 0;
+        
+        for (let i = 0; i < updatedArticles.length; i++) {
+          if (!updatedArticles[i].analyzed && updatedArticles[i].text.trim()) {
+            updatedArticles[i].analyzed = true;
+            analysisIndex++;
+            
+            if (analysisIndex >= validArticles.length) break;
+          }
+        }
+        
+        return updatedArticles;
+      });
+
+      setResults(prevResults => {
+        if (!prevResults) return result;
+        
+        return {
+          totalArticles: result.totalArticles,
+          sentimentDistribution: {
+            positive: (prevResults.sentimentDistribution.positive || 0) + (result.sentimentDistribution.positive || 0),
+            negative: (prevResults.sentimentDistribution.negative || 0) + (result.sentimentDistribution.negative || 0),
+            neutral: (prevResults.sentimentDistribution.neutral || 0) + (result.sentimentDistribution.neutral || 0)
+          },
+          averageSentiment: (
+            (prevResults.individualResults.reduce((sum, curr) => sum + curr.score, 0) +
+            result.individualResults.reduce((sum, curr) => sum + curr.score, 0)) /
+            (prevResults.individualResults.length + result.individualResults.length)
+          ).toFixed(2),
+          themes: [...prevResults.themes, ...result.themes],
+          individualResults: [...prevResults.individualResults, ...result.individualResults]
+        };
+      });
+    } catch (error) {
+      console.error('自动分析错误:', error);
     }
   };
 
