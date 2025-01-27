@@ -15,11 +15,12 @@ import {
   ArrowBack as ArrowBackIcon,
   Apps as AppsIcon,
   Upload as UploadIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-function AnalyzerHeader({ onUpload, onClearCache, sceneTitle, currentTab, onTabChange }) {
+function AnalyzerHeader({ onUpload, onClearCache, sceneTitle, currentTab, onTabChange, onAddArticle }) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -43,6 +44,11 @@ function AnalyzerHeader({ onUpload, onClearCache, sceneTitle, currentTab, onTabC
   const handleClearCache = () => {
     handleClose();
     onClearCache();
+  };
+
+  const handleAddArticle = () => {
+    handleClose();
+    onAddArticle();
   };
 
   return (
@@ -105,9 +111,13 @@ function AnalyzerHeader({ onUpload, onClearCache, sceneTitle, currentTab, onTabC
               horizontal: 'right',
             }}
           >
+            <MenuItem onClick={handleAddArticle}>
+              <AddIcon sx={{ mr: 1 }} />
+              添加文章
+            </MenuItem>
             <MenuItem onClick={handleUpload}>
               <UploadIcon sx={{ mr: 1 }} />
-              上传内容
+              批量上传
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleClearCache}>

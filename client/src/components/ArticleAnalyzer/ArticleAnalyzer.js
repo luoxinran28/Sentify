@@ -8,7 +8,8 @@ import {
   IconButton,
   Snackbar,
   Alert,
-  Input
+  Input,
+  Typography
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
@@ -224,20 +225,29 @@ function ArticleAnalyzer() {
     switch (currentTab) {
       case 'articles':
         return (
-          <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {articles.map((article, index) => (
-                <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <TextField
-                    multiline
-                    rows={2}
-                    value={article.text}
-                    onChange={(e) => handleArticleChange(index, e.target.value)}
-                    placeholder={`内容 ${index + 1}`}
-                    variant="outlined"
-                    fullWidth
-                    disabled={loading}
-                  />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {articles.map((article, index) => (
+              <Box 
+                key={index} 
+                sx={{ 
+                  display: 'flex', 
+                  gap: 1, 
+                  alignItems: 'flex-start'
+                }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  pt: 1
+                }}>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
+                  >
+                    {index + 1}
+                  </Typography>
                   {articles.length > 1 && (
                     <IconButton
                       onClick={() => handleRemoveArticle(index)}
@@ -249,27 +259,34 @@ function ArticleAnalyzer() {
                     </IconButton>
                   )}
                 </Box>
-              ))}
-              
-              <Button
-                startIcon={<AddIcon />}
-                onClick={handleAddArticle}
-                disabled={loading}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                添加内容
-              </Button>
+                <TextField
+                  multiline
+                  minRows={4}
+                  maxRows={6}
+                  value={article.text}
+                  onChange={(e) => handleArticleChange(index, e.target.value)}
+                  placeholder={`请输入内容...`}
+                  variant="outlined"
+                  fullWidth
+                  disabled={loading}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      minHeight: { xs: '120px', sm: '150px' }
+                    }
+                  }}
+                />
+              </Box>
+            ))}
 
-              <Button
-                variant="contained"
-                onClick={handleAnalyze}
-                disabled={loading}
-                sx={{ alignSelf: 'flex-end' }}
-              >
-                开始分析
-              </Button>
-            </Box>
-          </Paper>
+            <Button
+              variant="contained"
+              onClick={handleAnalyze}
+              disabled={loading}
+              sx={{ alignSelf: 'flex-end', mt: 2 }}
+            >
+              开始分析
+            </Button>
+          </Box>
         );
       case 'overview':
         return results && (
@@ -306,9 +323,10 @@ function ArticleAnalyzer() {
         sceneTitle={scene?.title_zh}
         currentTab={currentTab}
         onTabChange={handleTabChange}
+        onAddArticle={handleAddArticle}
       />
       <Container maxWidth="md">
-        <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ py: 4 }}>
           {renderContent()}
         </Box>
       </Container>
