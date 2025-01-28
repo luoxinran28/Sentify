@@ -1,11 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const scenarioRoutes = require('./routes/scenarioRoutes');
 const authRoutes = require('./routes/authRoutes');
 const articleRoutes = require('./routes/articleRoutes');
-const db = require('./services/postgresService');
-const { authenticateUser } = require('./middleware/auth');
+const { query } = require('./services/database/query');
 require('dotenv').config();
 
 const app = express();
@@ -24,22 +22,19 @@ app.use('/api/articles', articleRoutes);
 // 初始化数据库并启动服务器
 const startServer = async () => {
   try {
-    // 验证环境变量
     if (!process.env.POSTGRES_URL) {
       throw new Error('数据库连接字符串未配置');
     }
 
-    await db.initDatabase();
-    console.log('数据库初始化成功');
+    // 测试数据库连接
+    await query('SELECT NOW()');
+    console.log('数据库连接测试成功');
     
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
     console.error('服务器启动失败:', error);
-    if (error.code === 'ECONNREFUSED') {
-      console.error('无法连接到数据库，请检查数据库连接配置');
-    }
     process.exit(1);
   }
 };
