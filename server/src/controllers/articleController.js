@@ -20,10 +20,24 @@ exports.analyzeArticles = async (req, res) => {
     }
 
     const analysisResult = await analysisService.analyzeArticles(validArticles, scenarioId);
-    res.json(analysisResult);
+    
+    const results = {
+      totalArticles: validArticles.length,
+      sentimentDistribution: analysisResult.overallSentiment,
+      averageSentiment: (
+        analysisResult.analyses.reduce((sum, curr) => sum + curr.score, 0) / 
+        validArticles.length
+      ).toFixed(2),
+      themes: analysisResult.themes,
+      individualResults: analysisResult.analyses
+    };
+
+    res.json(results);
   } catch (error) {
-    console.error('分析文章失败:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      error: '分析过程中发生错误',
+      details: error.message 
+    });
   }
 };
 
@@ -47,21 +61,21 @@ exports.getArticles = async (req, res) => {
 
 exports.clearArticles = async (req, res) => {
   try {
-    await databaseService.clearArticles();
-    res.json({ success: true });
+    const { scenarioId } = req.params;
+    await analysisService.clearArticles(scenarioId);
+    res.json({ success: true, message: '数据已清空' });
   } catch (error) {
-    console.error('清除文章失败:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      error: '清空数据失败',
+      details: error.message 
+    });
   }
 };
 
 exports.getScenarioArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
-    
-    // 获取场景的文章和分析结果
     const data = await analysisService.getScenarioArticles(scenarioId);
-    
     res.json(data);
   } catch (error) {
     res.status(500).json({ 
