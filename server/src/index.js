@@ -3,7 +3,7 @@ const cors = require('cors');
 const scenarioRoutes = require('./routes/scenarioRoutes');
 const authRoutes = require('./routes/authRoutes');
 const articleRoutes = require('./routes/articleRoutes');
-const { query } = require('./services/database/query');
+const { testConnection } = require('./services/database/pool');
 require('dotenv').config();
 
 const app = express();
@@ -27,8 +27,10 @@ const startServer = async () => {
     }
 
     // 测试数据库连接
-    await query('SELECT NOW()');
-    console.log('数据库连接测试成功');
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('数据库连接测试失败');
+    }
     
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

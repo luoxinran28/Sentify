@@ -1,4 +1,4 @@
-const { query } = require('../services/initDatabaseService');
+const { query } = require('../services/database/query');
 
 exports.authenticateUser = async (req, res, next) => {
   try {

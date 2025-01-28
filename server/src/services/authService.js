@@ -1,4 +1,4 @@
-const { query } = require('./initDatabaseService');
+const { query } = require('./database/query');
 
 // 验证访问码
 const verifyAndCreateUser = async (encryptedCode) => {

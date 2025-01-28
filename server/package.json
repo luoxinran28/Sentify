@@ -6,8 +6,8 @@
     "start": "node src/index.js",
     "dev": "nodemon --inspect src/index.js",
     "debug": "node --inspect-brk src/index.js",
-    "migrate": "node src/database/migrations/migrate.js",
-    "migrate:revert": "node src/database/migrations/migrate.js revert"
+    "migrate": "node src/utils/migrations/migrate.js",
+    "migrate:revert": "node src/utils/migrations/migrate.js revert"
   },
   "dependencies": {
     "axios": "^1.6.0",

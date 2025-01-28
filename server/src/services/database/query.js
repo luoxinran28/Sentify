@@ -2,10 +2,11 @@ const { getPool } = require('./pool');
 
 const executeQuery = async (text, params, retries = 3) => {
   let lastError;
+  let pool = getPool();
   
   for (let i = 0; i < retries; i++) {
     try {
-      const client = await getPool().connect();
+      const client = await pool.connect();
       try {
         const result = await client.query(text, params);
         return result;
@@ -16,9 +17,12 @@ const executeQuery = async (text, params, retries = 3) => {
       lastError = error;
       console.error(`查询执行失败 (尝试 ${i + 1}/${retries}):`, error);
       
-      if (error.code === 'ECONNREFUSED' || error.code === '57P01') {
+      if (error.code === 'ECONNREFUSED' || error.code === '57P01' || 
+          error.message.includes('timeout')) {
+        // 重置连接池并等待
         pool = null;
         await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        pool = getPool(); // 获取新的连接池
         continue;
       }
       

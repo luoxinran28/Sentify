@@ -1,4 +1,4 @@
-const { query } = require('./initDatabaseService');
+const { query } = require('./database/query');
 const ITEMS_PER_PAGE = 10;
 
 class ScenarioService {

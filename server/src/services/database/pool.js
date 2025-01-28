@@ -40,11 +40,13 @@ const createPoolConfig = () => {
     const config = parseDbUrl(dbUrl);
     return {
       ...config,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-      maxUses: 7500,
-      allowExitOnIdle: true
+      max: 20,                           // 最大连接数
+      idleTimeoutMillis: 30000,          // 空闲超时：30秒
+      connectionTimeoutMillis: 10000,     // 连接超时：10秒 (增加了超时时间)
+      maxUses: 7500,                     // 每个连接最大使用次数
+      allowExitOnIdle: true,
+      keepAlive: true,                   // 保持连接活跃
+      application_name: 'sentify'         // 应用名称，便于调试
     };
   } catch (error) {
     console.error('创建数据库配置失败:', error);
@@ -61,6 +63,11 @@ const getPool = () => {
     pool.on('error', (err, client) => {
       console.error('数据库连接池错误:', err);
       console.error('发生错误的客户端:', client);
+      // 在致命错误时重置连接池
+      if (err.code === 'ECONNREFUSED' || err.code === '57P01') {
+        console.log('检测到致命错误，重置连接池');
+        pool = null;
+      }
     });
 
     pool.on('connect', () => {
@@ -74,6 +81,24 @@ const getPool = () => {
   return pool;
 };
 
+// 添加一个测试连接的函数
+const testConnection = async () => {
+  try {
+    const client = await getPool().connect();
+    try {
+      await client.query('SELECT NOW()');
+      console.log('数据库连接测试成功');
+      return true;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('数据库连接测试失败:', error);
+    return false;
+  }
+};
+
 module.exports = {
-  getPool
+  getPool,
+  testConnection
 };
