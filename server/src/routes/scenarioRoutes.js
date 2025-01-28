@@ -4,7 +4,7 @@ const { authenticateUser } = require('../middleware/auth');
 const articleController = require('../controllers/articleController');
 const scenarioController = require('../controllers/scenarioController');
 
-// 应用认证中间件
+// 应用认证中间件到所有场景相关路由
 router.use(authenticateUser);
 
 // 场景相关路由

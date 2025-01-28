@@ -12,12 +12,12 @@ const PORT = process.env.PORT || 5010;
 app.use(cors());
 app.use(express.json());
 
-// 添加验证路由
+// 认证路由（不需要验证）
 app.use('/api/auth', authRoutes);
-// 场景路由
-app.use('/api/scenarios', scenarioRoutes);
-// 文章分析路由
-app.use('/api/articles', articleRoutes);
+
+// 需要验证的路由
+app.use('/api/scenarios', scenarioRoutes);  // 场景路由
+app.use('/api/articles', articleRoutes);    // 文章分析路由
 
 // 初始化数据库并启动服务器
 const startServer = async () => {
