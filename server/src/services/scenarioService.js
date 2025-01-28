@@ -57,7 +57,7 @@ class ScenarioService {
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalItems / ITEMS_PER_PAGE),
-        totalItems
+        totalItems: parseInt(totalItems)
       }
     };
   }

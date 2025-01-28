@@ -7,8 +7,8 @@ const articleController = require('../controllers/articleController');
 router.use(authenticateUser);
 
 // 文章分析路由
+router.get('/:scenarioId', articleController.getScenarioArticles);
 router.post('/:scenarioId/analyze', articleController.analyzeArticles);
 router.post('/:scenarioId/clear', articleController.clearArticles);
-router.get('/:scenarioId', articleController.getScenarioArticles);
 
 module.exports = router; 

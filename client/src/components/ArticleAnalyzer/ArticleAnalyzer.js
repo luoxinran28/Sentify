@@ -14,7 +14,8 @@ import {
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { useLocation, useParams } from 'react-router-dom';
-import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/api';
+// import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/articleService';
+import { articleService } from '../../services/articleService';
 import AnalyzerHeader from './AnalyzerHeader';
 import { Overview, ThemeAnalysis, ArticleAnalysisCard } from './AnalysisResults';
 import InfiniteScroll from '../common/InfiniteScroll';
@@ -34,13 +35,14 @@ function ArticleAnalyzer() {
   const [currentTab, setCurrentTab] = useState('articles');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState(null);
 
   const fileInputRef = useRef(null);
 
   const loadScenarioArticles = async (pageNum) => {
     try {
       setLoading(true);
-      const data = await getScenarioArticles(scenarioId, pageNum);
+      const data = await articleService.getScenarioArticles(scenarioId, pageNum);
       
       if (data.articles && data.articles.length > 0) {
         const newArticles = data.articles.map(article => ({ 
@@ -58,14 +60,10 @@ function ArticleAnalyzer() {
         setHasMore(data.pagination.currentPage < data.pagination.totalPages);
         
         analyzeNewArticles(newArticles);
-      }
+      } 
     } catch (error) {
       console.error('加载场景文章错误:', error);
-      setSnackbar({
-        open: true,
-        message: '加载场景文章失败',
-        severity: 'error'
-      });
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -89,7 +87,7 @@ function ArticleAnalyzer() {
       if (validArticles.length === 0) return;
 
       // 调用API进行文章分析，只传递文本内容
-      const result = await analyzeArticles(validArticles.map(a => a.text), scene.id);
+      const result = await articleService.analyzeArticles(validArticles.map(a => a.text), scene.id);
       
       // 将分析结果与原文章ID关联
       // 保持数组顺序与validArticles一致，确保ID对应正确
@@ -209,7 +207,7 @@ function ArticleAnalyzer() {
         return;
       }
 
-      const result = await analyzeArticles(validArticles, scene.id);
+      const result = await articleService.analyzeArticles(validArticles, scene.id);
       setResults(result);
     } catch (error) {
       console.error('分析错误:', error);
@@ -225,7 +223,7 @@ function ArticleAnalyzer() {
 
   const handleClearArticles = async () => {
     try {
-      await clearArticles(scene.id);
+      await articleService.clearArticles(scene.id);
       
       setArticles([{ text: '' }]);
       setResults(null);

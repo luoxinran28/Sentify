@@ -32,7 +32,7 @@ class ArticleService {
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(total / limit),
-          total
+          totalItems: total
         }
       };
     } catch (error) {

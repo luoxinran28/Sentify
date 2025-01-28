@@ -11,7 +11,7 @@ import {
   Button
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { scenarioApi } from '../../services/api';
+import { scenarioService } from '../../services/scenarioService';
 import SceneCard from './SceneCard';
 import Header from '../Header';
 import AddSceneDialog from './AddSceneDialog';
@@ -40,7 +40,7 @@ function SceneList({ onLogout }) {
   const loadScenarios = useCallback(async (pageNum, signal) => {
     try {
       setLoading(true);
-      const response = await scenarioApi.getScenarios(pageNum, signal);
+      const response = await scenarioService.getScenarios(pageNum, signal);
       
       if (pageNum === 1) {
         setScenarios(response.scenarios);
@@ -77,7 +77,7 @@ function SceneList({ onLogout }) {
 
   const handleAddScene = async (data) => {
     try {
-      const newScenario = await scenarioApi.createScenario(data);
+      const newScenario = await scenarioService.createScenario(data);
       setOpenAddDialog(false);
       // 直接更新状态，避免重新请求
       setScenarios(prev => [newScenario, ...prev]);

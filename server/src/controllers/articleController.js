@@ -75,9 +75,18 @@ exports.clearArticles = async (req, res) => {
 exports.getScenarioArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
-    const data = await analysisService.getScenarioArticles(scenarioId);
+    const { page = 1, limit = 5 } = req.query;
+    
+    const data = await articleService.getArticlesByScenario(
+      scenarioId,
+      parseInt(page),
+      parseInt(limit)
+    );
+    
+    // 确保返回格式一致
     res.json(data);
   } catch (error) {
+    console.error('获取场景文章失败:', error);
     res.status(500).json({ 
       error: '获取场景文章失败',
       details: error.message 

@@ -9,7 +9,7 @@ import {
   Paper
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { verifyCode } from '../services/api';
+import { authService } from '../services';
 
 const CodeInput = styled(TextField)(({ theme }) => ({
   width: '50px',
@@ -73,7 +73,7 @@ function AuthPage({ onAuthSuccess }) {
 
   const handleSubmit = async (fullCode) => {
     try {
-      const result = await verifyCode(fullCode);
+      const result = await authService.verify(fullCode);
       if (result.success) {
         onAuthSuccess(result.user);
       } else {
