@@ -19,6 +19,7 @@ import { articleService } from '../../services/articleService';
 import AnalyzerHeader from './AnalyzerHeader';
 import { Overview, ThemeAnalysis, ArticleAnalysisCard } from './AnalysisResults';
 import InfiniteScroll from '../common/InfiniteScroll';
+import AnalyzerFooter from './AnalyzerFooter';
 
 function ArticleAnalyzer() {
   const location = useLocation();
@@ -407,15 +408,6 @@ function ArticleAnalyzer() {
                   />
                 </Box>
               ))}
-
-              <Button
-                variant="contained"
-                onClick={handleAnalyze}
-                disabled={loading}
-                sx={{ alignSelf: 'flex-end', mt: 2 }}
-              >
-                开始分析
-              </Button>
             </Box>
           </InfiniteScroll>
         );
@@ -447,20 +439,27 @@ function ArticleAnalyzer() {
   };
 
   return (
-    <>
+    <Box sx={{ pb: 6 }}>
       <AnalyzerHeader 
-        onUpload={handleUpload} 
-        onClearCache={handleClearArticles}
-        sceneTitle={scene?.title_zh}
+        onUpload={handleUpload}
+        onClear={handleClearArticles}
+        sceneTitle={scene?.titleZh}
         currentTab={currentTab}
         onTabChange={handleTabChange}
-        onAddArticle={handleAddArticle}
       />
-      <Container maxWidth="md">
+      
+      <Container maxWidth="lg">
         <Box sx={{ py: 4 }}>
           {renderContent()}
         </Box>
       </Container>
+      
+      <AnalyzerFooter
+        onAnalyze={handleAnalyze}
+        onAddArticle={handleAddArticle}
+        loading={loading}
+        disabled={articles.length === 0}
+      />
 
       <Snackbar
         open={snackbar.open}
@@ -482,7 +481,7 @@ function ArticleAnalyzer() {
         onChange={handleFileChange}
         accept=".xlsx,.xls"
       />
-    </>
+    </Box>
   );
 }
 
