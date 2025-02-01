@@ -10,9 +10,12 @@ import {
   Alert,
   Input,
   Typography,
-  Checkbox
+  Checkbox,
+  Card,
+  CardContent,
+  CardActions
 } from '@mui/material';
-import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import { Add as AddIcon, Remove as RemoveIcon, Close as CloseIcon, Margin } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { useLocation, useParams } from 'react-router-dom';
 // import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/articleService';
@@ -40,6 +43,8 @@ function ArticleAnalyzer() {
   const [error, setError] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedArticles, setSelectedArticles] = useState(new Set());
+  const [newArticle, setNewArticle] = useState('');
+  const [showNewArticleCard, setShowNewArticleCard] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -187,8 +192,41 @@ function ArticleAnalyzer() {
   };
 
   const handleAddArticle = () => {
-    if (isSelecting) return;
-    setArticles([...articles, { text: '' }]);
+    setShowNewArticleCard(true);
+    setNewArticle('');
+    setError('');
+  };
+
+  const handleCancelAdd = () => {
+    setShowNewArticleCard(false);
+    setNewArticle('');
+    setError('');
+  };
+
+  const handleConfirmAdd = () => {
+    // 检查是否为空
+    if (!newArticle.trim()) {
+      setError('文章内容不能为空');
+      return;
+    }
+
+    // 检查是否重复
+    const isDuplicate = articles.some(article => 
+      typeof article === 'string' 
+        ? article.trim() === newArticle.trim()
+        : article.text.trim() === newArticle.trim()
+    );
+
+    if (isDuplicate) {
+      setError('当前场景已存在相同的文章');
+      return;
+    }
+
+    // 添加新文章
+    setArticles(prev => [...prev, newArticle]);
+    setShowNewArticleCard(false);
+    setNewArticle('');
+    setError('');
   };
 
   const handleRemoveArticle = (index) => {
@@ -556,7 +594,7 @@ function ArticleAnalyzer() {
   };
 
   return (
-    <Box sx={{ pb: 6 }}>
+    <Box sx={{ pb: 8 }}>
       <AnalyzerHeader 
         onUpload={handleUpload}
         onClear={handleClearArticles}
@@ -604,6 +642,92 @@ function ArticleAnalyzer() {
         onChange={handleFileChange}
         accept=".xlsx,.xls"
       />
+
+      {/* 新文章输入卡片 */}
+      {showNewArticleCard && (
+        <Paper 
+          sx={{ 
+            p: 2, 
+            mb: 2, 
+            ml: 2,
+            mr: 2,
+            position: 'relative',
+            transition: 'all 0.2s ease-in-out',
+            border: error ? '1px solid #f44336' : '1px solid transparent',
+            '&:hover': {
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            mb: 1,
+            color: 'text.secondary',
+            typography: 'body2'
+          }}>
+            新文章
+            <IconButton 
+              size="small" 
+              onClick={handleCancelAdd}
+              aria-label="关闭"
+              sx={{ 
+                ml: 'auto',
+                mr: -1,
+                mt: -1,
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover'
+                }
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <Box>
+            <TextField
+              multiline
+              minRows={4}
+              maxRows={6}
+              value={newArticle}
+              onChange={(e) => {
+                setNewArticle(e.target.value);
+                if (error) setError('');
+              }}
+              placeholder="请输入文章内容..."
+              variant="outlined"
+              fullWidth
+              error={!!error}
+              helperText={error}
+              sx={{
+                '& .MuiInputBase-root': {
+                  minHeight: { xs: '120px', sm: '150px' },
+                  backgroundColor: 'background.paper'
+                }
+              }}
+            />
+          </Box>
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            mt: 2
+          }}>
+            <Button 
+              variant="contained"
+              onClick={handleConfirmAdd}
+              disabled={!newArticle.trim()}
+              sx={{
+                textTransform: 'none',
+                minWidth: 100
+              }}
+            >
+              确认添加
+            </Button>
+          </Box>
+        </Paper>
+      )}
     </Box>
   );
 }
