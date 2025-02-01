@@ -421,7 +421,17 @@ function ArticleAnalyzer() {
         p: 2, 
         mb: 2, 
         position: 'relative',
-        transition: 'padding-left 0.2s ease-in-out'
+        transition: 'all 0.2s ease-in-out',
+        cursor: isSelecting ? 'pointer' : 'default',
+        bgcolor: isSelecting && selectedArticles.has(index) ? 'action.selected' : 'background.paper',
+        '&:hover': isSelecting ? {
+          bgcolor: 'action.hover'
+        } : {}
+      }}
+      onClick={() => {
+        if (isSelecting) {
+          handleToggleArticle(index);
+        }
       }}
     >
       <Box sx={{ 
@@ -436,12 +446,11 @@ function ArticleAnalyzer() {
       {isSelecting && (
         <Checkbox
           checked={selectedArticles.has(index)}
-          onChange={() => handleToggleArticle(index)}
           sx={{ 
             position: 'absolute', 
             right: 8, 
             top: 8,
-            transition: 'opacity 0.2s ease-in-out'
+            pointerEvents: 'none'  // 防止复选框捕获点击事件
           }}
         />
       )}
@@ -459,9 +468,15 @@ function ArticleAnalyzer() {
           variant="outlined"
           fullWidth
           disabled={loading || isSelecting}
+          onClick={(e) => {
+            if (isSelecting) {
+              e.stopPropagation();  // 防止文本框点击触发卡片选择
+            }
+          }}
           sx={{
             '& .MuiInputBase-root': {
-              minHeight: { xs: '120px', sm: '150px' }
+              minHeight: { xs: '120px', sm: '150px' },
+              backgroundColor: 'background.paper'
             }
           }}
         />

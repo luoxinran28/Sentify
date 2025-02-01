@@ -21,12 +21,22 @@ const StyledFooter = styled(Paper)(({ theme }) => ({
   right: 0,
   zIndex: 1000,
   height: 48,
-  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(8px)',
-  borderTop: `1px solid ${theme.palette.divider}`,
   display: 'flex',
   justifyContent: 'center',
-  alignItems: 'center'
+  alignItems: 'center',
+  background: 'none',
+  boxShadow: 'none'
+}));
+
+const ButtonGroup = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  height: '100%',
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(8px)',
+  borderRadius: theme.shape.borderRadius,
+  border: `1px solid ${theme.palette.divider}`,
+  overflow: 'hidden'
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -35,6 +45,8 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 0,
   textTransform: 'none',
   fontSize: '0.875rem',
+  minWidth: 'auto',
+  whiteSpace: 'nowrap',
   '&:hover': {
     backgroundColor: 'rgba(0, 0, 0, 0.04)'
   }
@@ -43,15 +55,19 @@ const ActionButton = styled(Button)(({ theme }) => ({
 const ActionPanel = styled(Box)(({ theme }) => ({
   position: 'absolute',
   bottom: 48,
-  left: 0,
-  right: 0,
+  left: '50%',
+  transform: 'translateX(-50%)',
   padding: theme.spacing(1),
   backgroundColor: 'rgba(255, 255, 255, 0.95)',
   backdropFilter: 'blur(8px)',
-  borderTop: `1px solid ${theme.palette.divider}`,
+  borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
+  border: `1px solid ${theme.palette.divider}`,
+  borderBottom: 'none',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center'
+  justifyContent: 'center',
+  minWidth: 'auto',
+  maxWidth: '100%'
 }));
 
 const AnalyzerFooter = ({ 
@@ -79,15 +95,8 @@ const AnalyzerFooter = ({
 
   return (
     <>
-      <StyledFooter elevation={1}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          maxWidth: 400,
-          margin: '0 auto'
-        }}>
+      <StyledFooter>
+        <ButtonGroup>
           <ActionButton
             color="inherit"
             onClick={onToggleSelect}
@@ -102,7 +111,7 @@ const AnalyzerFooter = ({
             onClick={onAddArticle}
             disabled={loading || isSelecting}
           >
-            添加文章
+            添加
           </ActionButton>
           
           <Divider orientation="vertical" flexItem />
@@ -115,36 +124,31 @@ const AnalyzerFooter = ({
           >
             {loading ? '分析中...' : '开始分析'}
           </ActionButton>
-        </Box>
+        </ButtonGroup>
 
         <Slide direction="up" in={isSelecting} mountOnEnter unmountOnExit>
           <ActionPanel>
             <Box sx={{ 
               display: 'flex', 
-              alignItems: 'center',
-              justifyContent: 'center',
-              maxWidth: 400,
-              margin: '0 auto',
-              width: '100%',
+              gap: 1,
               position: 'relative'
             }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <ActionButton color="inherit" onClick={onSelectAll}>
-                  全选
-                </ActionButton>
-                <ActionButton
-                  color="error"
-                  onClick={handleDelete}
-                  disabled={selectedCount === 0}
-                >
-                  删除
-                </ActionButton>
-              </Box>
+              <ActionButton color="inherit" onClick={onSelectAll}>
+                全选
+              </ActionButton>
+              <ActionButton
+                color="error"
+                onClick={handleDelete}
+                disabled={selectedCount === 0}
+              >
+                删除
+              </ActionButton>
               {selectedCount > 0 && (
                 <Box sx={{ 
-                  position: 'absolute',
-                  right: 0,
-                  color: 'text.secondary'
+                  ml: 2,
+                  color: 'text.secondary',
+                  display: 'flex',
+                  alignItems: 'center'
                 }}>
                   已选择 {selectedCount}/{totalCount} 篇文章
                 </Box>
