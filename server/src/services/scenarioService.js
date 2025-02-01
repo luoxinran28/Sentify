@@ -1,113 +1,104 @@
 const { query } = require('./database/query');
-const ITEMS_PER_PAGE = 10;
+
+// 统一的数据转换函数
+const transformScenario = (row) => ({
+  id: row.id,
+  titleEn: row.title_en,
+  titleZh: row.title_zh,
+  source: row.source,
+  prompt: row.prompt,
+  updatedAt: row.updated_at,
+  createdAt: row.created_at,
+  userId: row.user_id,
+  count: row.count
+});
 
 class ScenarioService {
-  async createScenario(userId, data) {
-    const { titleEn, titleZh, source, prompt } = data;
-    
-    // 检查用户场景数量
-    const countResult = await query(
-      'SELECT COUNT(*) FROM scenarios WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (parseInt(countResult.rows[0].count) >= 10) {
-      throw new Error('已达到场景数量上限（10个）');
-    }
+  async createScenario(data) {
+    try {
+      const result = await query(
+        `INSERT INTO scenarios (title_en, title_zh, source, prompt, user_id)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [data.titleEn, data.titleZh, data.source, data.prompt, data.userId]
+      );
 
-    // 创建场景
-    const result = await query(
-      `INSERT INTO scenarios (user_id, title_en, title_zh, source, prompt)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [userId, titleEn, titleZh, source, prompt]
-    );
-    
-    return result.rows[0];
+      return transformScenario(result.rows[0]);
+    } catch (error) {
+      console.error('创建场景失败:', error);
+      throw error;
+    }
   }
 
-  async getScenarios(page = 1) {
-    const offset = (page - 1) * ITEMS_PER_PAGE;
-    
-    const result = await query(
-      `SELECT s.*, 
-        COUNT(a.id) as article_count,
-        COUNT(*) OVER() as total_count
-       FROM scenarios s
-       LEFT JOIN articles a ON s.id = a.scenario_id
-       GROUP BY s.id
-       ORDER BY s.updated_at DESC 
-       LIMIT $1 OFFSET $2`,
-      [ITEMS_PER_PAGE, offset]
-    );
+  async getScenarios(page = 1, limit = 10) {
+    try {
+      const offset = (page - 1) * limit;
+      
+      const result = await query(
+        `SELECT s.*, COUNT(a.id) as count
+         FROM scenarios s
+         LEFT JOIN articles a ON s.id = a.scenario_id
+         GROUP BY s.id
+         ORDER BY s.updated_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
 
-    const totalItems = result.rows[0]?.total_count || 0;
+      const countResult = await query('SELECT COUNT(*) as total FROM scenarios');
+      const total = parseInt(countResult.rows[0].total);
 
-    return {
-      scenarios: result.rows.map(row => ({
-        id: row.id,
-        titleEn: row.title_en,
-        titleZh: row.title_zh,
-        source: row.source,
-        prompt: row.prompt,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        count: parseInt(row.article_count)
-      })),
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalItems / ITEMS_PER_PAGE),
-        totalItems: parseInt(totalItems)
-      }
-    };
+      return {
+        scenarios: result.rows.map(transformScenario),
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total
+        }
+      };
+    } catch (error) {
+      console.error('获取场景列表失败:', error);
+      throw error;
+    }
   }
 
   async updateScenario(id, data) {
-    const { titleEn, titleZh, source, prompt } = data;
-    
-    const result = await query(
-      `UPDATE scenarios 
-       SET title_en = $1, title_zh = $2, source = $3, prompt = $4, 
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
-       RETURNING *`,
-      [titleEn, titleZh, source, prompt, id]
-    );
-    
-    return result.rows[0];
+    try {
+      const result = await query(
+        `UPDATE scenarios 
+         SET title_en = $1, title_zh = $2, source = $3, prompt = $4, updated_at = NOW()
+         WHERE id = $5 AND user_id = $6
+         RETURNING *`,
+        [data.titleEn, data.titleZh, data.source, data.prompt, id, data.userId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('场景不存在或无权限修改');
+      }
+
+      return transformScenario(result.rows[0]);
+    } catch (error) {
+      console.error('更新场景失败:', error);
+      throw error;
+    }
   }
 
-  async deleteScenario(id) {
-    // 使用事务确保数据一致性
-    const client = await pool.connect();
+  async deleteScenario(id, userId) {
     try {
-      await client.query('BEGIN');
-      
-      // 删除分析结果
-      await client.query(
-        'DELETE FROM analysis_results WHERE scenario_id = $1',
-        [id]
+      const result = await query(
+        `DELETE FROM scenarios
+         WHERE id = $1 AND user_id = $2
+         RETURNING *`,
+        [id, userId]
       );
-      
-      // 删除文章
-      await client.query(
-        'DELETE FROM articles WHERE scenario_id = $1',
-        [id]
-      );
-      
-      // 删除场景
-      const result = await client.query(
-        'DELETE FROM scenarios WHERE id = $1 RETURNING *',
-        [id]
-      );
-      
-      await client.query('COMMIT');
-      return result.rows[0];
+
+      if (result.rows.length === 0) {
+        throw new Error('场景不存在或无权限删除');
+      }
+
+      return transformScenario(result.rows[0]);
     } catch (error) {
-      await client.query('ROLLBACK');
+      console.error('删除场景失败:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 }

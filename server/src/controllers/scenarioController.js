@@ -27,12 +27,18 @@ exports.createScenario = async (req, res) => {
 
 exports.updateScenario = async (req, res) => {
   try {
-    const scenario = await scenarioService.updateScenario(req.params.id, req.body);
-    res.json(scenario);
+    const { id } = req.params;
+    const userId = req.user.id;  // 从认证中间件获取用户ID
+    const updatedScene = await scenarioService.updateScenario(id, {
+      ...req.body,
+      userId  // 添加 userId
+    });
+    res.json(updatedScene);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
+    console.error('更新场景失败:', error);
+    res.status(500).json({ 
+      error: '更新场景失败',
+      details: error.message 
     });
   }
 };

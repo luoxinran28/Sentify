@@ -27,6 +27,7 @@ exports.authenticateUser = async (req, res, next) => {
 
     // 将用户信息添加到请求对象
     req.user = result.rows[0];
+    req.user.id = result.rows[0].id;  // 确保设置了用户信息
     next();
   } catch (error) {
     console.error('认证中间件错误:', error);

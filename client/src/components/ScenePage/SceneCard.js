@@ -4,23 +4,53 @@ import {
   CardContent, 
   Typography, 
   Box,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import { Edit as EditIcon } from '@mui/icons-material';
 
-function SceneCard({ scene, onClick }) {
+function SceneCard({ scene, onClick, onEdit, isEditing }) {
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    onEdit(scene);
+  };
+
   return (
     <Card 
       sx={{ 
         display: 'flex',
         flexDirection: 'column',
-        cursor: scene.hasLink ? 'pointer' : 'default',
+        cursor: 'pointer',
         transition: 'all 0.2s ease-in-out',
+        position: 'relative',
         '&:hover': {
-          transform: scene.hasLink ? 'scale(1.02)' : 'none',
-          boxShadow: scene.hasLink ? '0 8px 24px rgba(0,0,0,0.12)' : 'none'
+          transform: 'scale(1.02)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
         }
       }}
       onClick={onClick}
     >
+      {isEditing && (
+        <Tooltip title="编辑场景" placement="top">
+          <IconButton
+            onClick={handleEditClick}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              zIndex: 1,
+              backgroundColor: 'background.paper',
+              boxShadow: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+
       <CardContent sx={{ 
         flexGrow: 1, 
         display: 'flex', 
@@ -59,7 +89,7 @@ function SceneCard({ scene, onClick }) {
               padding: '1rem'
             }}
           >
-            {scene.titleCn?.slice(0, 2) || ''}
+            {scene.titleZh?.slice(0, 2) || ''}
           </Typography>
         </Box>
         <Box sx={{ flexGrow: 1 }}>
@@ -85,7 +115,7 @@ function SceneCard({ scene, onClick }) {
               mb: 2
             }}
           >
-            {scene.titleCn}
+            {scene.titleZh}
           </Typography>
         </Box>
         <Box sx={{ 

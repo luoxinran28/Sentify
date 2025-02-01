@@ -6,11 +6,12 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Box
+  Box,
+  Divider
 } from '@mui/material';
-import { DensityMedium } from '@mui/icons-material';
+import { DensityMedium, Edit as EditIcon } from '@mui/icons-material';
 
-function SceneHeader({ menuItems = [] }) {
+function SceneHeader({ menuItems = [], isEditing, onToggleEdit }) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenu = (event) => {
@@ -24,6 +25,11 @@ function SceneHeader({ menuItems = [] }) {
   const handleMenuItemClick = (onClick) => {
     handleClose();
     onClick?.();
+  };
+
+  const handleEditClick = () => {
+    handleClose();
+    onToggleEdit();
   };
 
   return (
@@ -45,11 +51,23 @@ function SceneHeader({ menuItems = [] }) {
             open={Boolean(anchorEl)}
             onClose={handleClose}
           >
+            <MenuItem 
+              onClick={handleEditClick}
+              sx={{
+                color: isEditing ? 'text.secondary' : 'inherit'
+              }}
+            >
+              <EditIcon sx={{ mr: 1, fontSize: 20 }} />
+              {isEditing ? '退出编辑' : '编辑场景'}
+            </MenuItem>
+            <Divider />
             {menuItems.map((item, index) => (
               <MenuItem 
                 key={index}
                 onClick={() => handleMenuItemClick(item.onClick)}
+                disabled={isEditing && item.disabledInEdit}
               >
+                {item.icon && <item.icon sx={{ mr: 1, fontSize: 20 }} />}
                 {item.label}
               </MenuItem>
             ))}

@@ -17,6 +17,8 @@ import SceneHeader from './SceneHeader';
 import AddSceneDialog from './AddSceneDialog';
 import LoadingSpinner from '../common/LoadingSpinner';
 import InfiniteScroll from '../common/InfiniteScroll';
+import EditSceneDialog from './Dialogs/EditSceneDialog';
+import DeleteConfirmDialog from './Dialogs/DeleteConfirmDialog';
 
 
 function SceneList({ onLogout }) {
@@ -26,6 +28,10 @@ function SceneList({ onLogout }) {
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingScene, setEditingScene] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [sceneToDelete, setSceneToDelete] = useState(null);
   
   const theme = useTheme();
   const navigate = useNavigate();
@@ -87,15 +93,76 @@ function SceneList({ onLogout }) {
     }
   };
 
+  const handleToggleEdit = () => {
+    setIsEditing(!isEditing);
+    // 退出编辑模式时清除相关状态
+    if (isEditing) {
+      setEditingScene(null);
+    }
+  };
+
+  const handleEditScene = (scene) => {
+    setEditingScene(scene);
+  };
+
+  const handleSaveScene = async (formData) => {
+    try {
+      const updatedScene = await scenarioService.updateScenario(editingScene.id, {
+        ...formData,
+        titleZh: formData.titleZh,
+      });
+      
+      // 更新本地状态，保持数据结构一致
+      setScenarios(prev => prev.map(s => 
+        s.id === updatedScene.id ? {
+          ...s,
+          titleEn: updatedScene.titleEn,
+          titleZh: updatedScene.titleZh,
+          source: updatedScene.source,
+          prompt: updatedScene.prompt,
+          updatedAt: updatedScene.updatedAt,
+          hasLink: true  // 保持链接可点击
+        } : s
+      ));
+      
+      setEditingScene(null);
+    } catch (error) {
+      console.error('更新场景失败:', error);
+    }
+  };
+
+  const handleDeleteClick = (scene) => {
+    setSceneToDelete(scene);
+    setShowDeleteDialog(true);
+    setEditingScene(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await scenarioService.deleteScenario(sceneToDelete.id);
+      
+      // 更新本地状态
+      setScenarios(prev => prev.filter(s => s.id !== sceneToDelete.id));
+      
+      setShowDeleteDialog(false);
+      setSceneToDelete(null);
+    } catch (error) {
+      console.error('删除场景失败:', error);
+      // 可以添加错误提示
+    }
+  };
+
   // Header 的菜单项配置
   const menuItems = [
     {
       label: '添加场景',
-      onClick: () => setOpenAddDialog(true)
+      onClick: () => setOpenAddDialog(true),
+      disabledInEdit: true  // 编辑模式下禁用
     },
     {
       label: '退出登录',
-      onClick: onLogout
+      onClick: onLogout,
+      disabledInEdit: true  // 编辑模式下禁用
     }
   ];
 
@@ -120,15 +187,12 @@ function SceneList({ onLogout }) {
             <Grid item xs={getGridCols()} key={scene.id}>
               <SceneCard 
                 scene={{
-                  id: scene.id,
-                  titleEn: scene.titleEn,
-                  titleCn: scene.titleZh,
-                  source: scene.source,
-                  hasLink: true,
-                  prompt: scene.prompt,
-                  count: scene.count
+                  ...scene,
+                  hasLink: true  // 确保每个场景都有这个属性
                 }}
                 onClick={() => handleSceneClick(scene)}
+                onEdit={handleEditScene}
+                isEditing={isEditing}
               />
             </Grid>
           ))}
@@ -139,12 +203,30 @@ function SceneList({ onLogout }) {
 
   return (
     <>
-      <SceneHeader menuItems={menuItems} />
+      <SceneHeader 
+        menuItems={menuItems} 
+        isEditing={isEditing}
+        onToggleEdit={handleToggleEdit}
+      />
       {content}
       <AddSceneDialog
         open={openAddDialog}
         onClose={() => setOpenAddDialog(false)}
         onSubmit={handleAddScene}
+      />
+      <EditSceneDialog
+        open={Boolean(editingScene)}
+        onClose={() => setEditingScene(null)}
+        onSave={handleSaveScene}
+        onDelete={handleDeleteClick}
+        scene={editingScene}
+        lastModified={editingScene?.updatedAt}
+      />
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleConfirmDelete}
+        sceneName={sceneToDelete?.titleZh}
       />
     </>
   );
