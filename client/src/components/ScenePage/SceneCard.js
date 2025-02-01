@@ -115,7 +115,7 @@ function SceneCard({ scene, onClick }) {
               fontWeight: 500
             }}
           >
-            {scene.count || 0} 条文章
+            {scene.count || 0} 条
           </Typography>
         </Box>
       </CardContent>

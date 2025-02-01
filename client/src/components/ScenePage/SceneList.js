@@ -13,7 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { scenarioService } from '../../services/scenarioService';
 import SceneCard from './SceneCard';
-import Header from '../Header';
+import SceneHeader from './SceneHeader';
 import AddSceneDialog from './AddSceneDialog';
 import LoadingSpinner from '../common/LoadingSpinner';
 import InfiniteScroll from '../common/InfiniteScroll';
@@ -139,7 +139,7 @@ function SceneList({ onLogout }) {
 
   return (
     <>
-      <Header menuItems={menuItems} />
+      <SceneHeader menuItems={menuItems} />
       {content}
       <AddSceneDialog
         open={openAddDialog}

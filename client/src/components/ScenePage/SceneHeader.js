@@ -8,9 +8,9 @@ import {
   MenuItem,
   Box
 } from '@mui/material';
-import { AccountCircle } from '@mui/icons-material';
+import { DensityMedium } from '@mui/icons-material';
 
-function Header({ menuItems = [] }) {
+function SceneHeader({ menuItems = [] }) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenu = (event) => {
@@ -38,7 +38,7 @@ function Header({ menuItems = [] }) {
             onClick={handleMenu}
             color="inherit"
           >
-            <AccountCircle />
+            <DensityMedium />
           </IconButton>
           <Menu
             anchorEl={anchorEl}
@@ -60,4 +60,4 @@ function Header({ menuItems = [] }) {
   );
 }
 
-export default Header; 
+export default SceneHeader; 
