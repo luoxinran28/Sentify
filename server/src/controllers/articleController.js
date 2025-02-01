@@ -92,4 +92,31 @@ exports.getScenarioArticles = async (req, res) => {
       details: error.message 
     });
   }
+};
+
+exports.deleteArticles = async (req, res) => {
+  try {
+    const { scenarioId } = req.params;
+    const { articleIds } = req.body;
+
+    if (!Array.isArray(articleIds) || articleIds.length === 0) {
+      return res.status(400).json({ 
+        error: '无效的文章ID列表',
+        details: '请提供要删除的文章ID数组'
+      });
+    }
+
+    await articleService.deleteArticles(scenarioId, articleIds);
+    
+    res.json({ 
+      success: true, 
+      message: `成功删除 ${articleIds.length} 篇文章` 
+    });
+  } catch (error) {
+    console.error('删除文章失败:', error);
+    res.status(500).json({ 
+      error: '删除文章失败',
+      details: error.message 
+    });
+  }
 }; 

@@ -10,5 +10,6 @@ router.use(authenticateUser);
 router.get('/:scenarioId', articleController.getScenarioArticles);
 router.post('/:scenarioId/analyze', articleController.analyzeArticles);
 router.post('/:scenarioId/clear', articleController.clearArticles);
+router.delete('/:scenarioId', articleController.deleteArticles);
 
 module.exports = router; 

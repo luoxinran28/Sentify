@@ -35,5 +35,17 @@ export const articleService = {
       console.error('清除文章失败:', error);
       throw new Error(error.response?.data?.message || '清除文章失败');
     }
+  },
+
+  deleteArticles: async (scenarioId, articleIds) => {
+    try {
+      const response = await axios.delete(`/articles/${scenarioId}`, {
+        data: { articleIds }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('删除文章失败:', error);
+      throw new Error(error.response?.data?.message || '删除文章失败');
+    }
   }
 }; 

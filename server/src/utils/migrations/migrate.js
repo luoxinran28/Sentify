@@ -72,6 +72,14 @@ const updateTables = `
       ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true;
     END IF;
   END $$;
+
+  -- 确保外键约束正确设置
+  ALTER TABLE analysis_results 
+  DROP CONSTRAINT IF EXISTS analysis_results_article_id_fkey,
+  ADD CONSTRAINT analysis_results_article_id_fkey 
+  FOREIGN KEY (article_id) 
+  REFERENCES articles(id) 
+  ON DELETE CASCADE;
 `;
 
 const dropTables = `

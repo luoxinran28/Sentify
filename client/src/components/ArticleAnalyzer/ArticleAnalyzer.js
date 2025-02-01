@@ -9,7 +9,8 @@ import {
   Snackbar,
   Alert,
   Input,
-  Typography
+  Typography,
+  Checkbox
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
@@ -37,6 +38,8 @@ function ArticleAnalyzer() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedArticles, setSelectedArticles] = useState(new Set());
 
   const fileInputRef = useRef(null);
 
@@ -184,6 +187,7 @@ function ArticleAnalyzer() {
   };
 
   const handleAddArticle = () => {
+    if (isSelecting) return;
     setArticles([...articles, { text: '' }]);
   };
 
@@ -193,6 +197,7 @@ function ArticleAnalyzer() {
   };
 
   const handleAnalyze = async () => {
+    if (isSelecting) return;
     try {
       setLoading(true);
       const validArticles = articles
@@ -245,6 +250,7 @@ function ArticleAnalyzer() {
   };
 
   const handleUpload = () => {
+    if (isSelecting) return;
     fileInputRef.current?.click();
   };
 
@@ -347,6 +353,122 @@ function ArticleAnalyzer() {
     }
   }, [page]);
 
+  const handleToggleSelect = () => {
+    setIsSelecting(!isSelecting);
+    setSelectedArticles(new Set());
+  };
+
+  const handleSelectAll = () => {
+    if (selectedArticles.size === articles.length) {
+      setSelectedArticles(new Set());
+    } else {
+      setSelectedArticles(new Set(articles.map((_, index) => index)));
+    }
+  };
+
+  const handleToggleArticle = (index) => {
+    const newSelected = new Set(selectedArticles);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedArticles(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    try {
+      const selectedIndexes = Array.from(selectedArticles);
+      const selectedArticleIds = selectedIndexes.map(index => articles[index].id).filter(Boolean);
+      
+      // 如果有已保存的文章，调用后端删除接口
+      if (selectedArticleIds.length > 0) {
+        await articleService.deleteArticles(scenarioId, selectedArticleIds);
+      }
+      
+      // 更新本地状态
+      const newArticles = articles.filter((_, index) => !selectedArticles.has(index));
+      setArticles(newArticles.length > 0 ? newArticles : []);
+      
+      // 如果删除了分析过的文章，清除分析结果
+      if (selectedIndexes.some(index => articles[index].analyzed)) {
+        setResults(null);
+      }
+      
+      // 退出选择模式
+      setIsSelecting(false);
+      setSelectedArticles(new Set());
+      
+      setSnackbar({
+        open: true,
+        message: `成功删除 ${selectedIndexes.length} 篇文章`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('删除文章失败:', error);
+      setSnackbar({
+        open: true,
+        message: '删除文章失败',
+        severity: 'error'
+      });
+    }
+  };
+
+  const renderArticleCard = (article, index) => (
+    <Paper 
+      key={article.id || index} 
+      sx={{ 
+        p: 2, 
+        mb: 2, 
+        position: 'relative',
+        transition: 'padding-left 0.2s ease-in-out'
+      }}
+    >
+      <Box sx={{ 
+        display: 'flex',
+        alignItems: 'center',
+        mb: 1,
+        color: 'text.secondary',
+        typography: 'body2'
+      }}>
+        原文{index + 1}
+      </Box>
+      {isSelecting && (
+        <Checkbox
+          checked={selectedArticles.has(index)}
+          onChange={() => handleToggleArticle(index)}
+          sx={{ 
+            position: 'absolute', 
+            right: 8, 
+            top: 8,
+            transition: 'opacity 0.2s ease-in-out'
+          }}
+        />
+      )}
+      <Box sx={{ 
+        pl: isSelecting ? 0 : 0,
+        transition: 'padding-left 0.2s ease-in-out'
+      }}>
+        <TextField
+          multiline
+          minRows={4}
+          maxRows={6}
+          value={typeof article === 'string' ? article : article.text || ''}
+          onChange={(e) => handleArticleChange(index, e.target.value)}
+          placeholder="请输入内容..."
+          variant="outlined"
+          fullWidth
+          disabled={loading || isSelecting}
+          sx={{
+            '& .MuiInputBase-root': {
+              minHeight: { xs: '120px', sm: '150px' }
+            }
+          }}
+        />
+      </Box>
+    </Paper>
+  );
+
   const renderContent = () => {
     switch (currentTab) {
       case 'articles':
@@ -357,77 +479,57 @@ function ArticleAnalyzer() {
             onLoadMore={handleLoadMore}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {articles.map((article, index) => (
+              {articles.length > 0 ? (
+                articles.map((article, index) => renderArticleCard(article, index))
+              ) : (
                 <Box 
-                  key={article.id || index}
                   sx={{ 
                     display: 'flex', 
-                    gap: 1, 
-                    alignItems: 'flex-start'
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    py: 8,
+                    color: 'text.secondary'
                   }}
                 >
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
-                    pt: 1
-                  }}>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                      sx={{ mb: 1 }}
-                    >
-                      {index + 1}
-                    </Typography>
-                    {articles.length > 1 && (
-                      <IconButton
-                        onClick={() => handleRemoveArticle(index)}
-                        disabled={loading}
-                        color="error"
-                        size="small"
-                      >
-                        <RemoveIcon />
-                      </IconButton>
-                    )}
-                  </Box>
-                  <TextField
-                    multiline
-                    minRows={4}
-                    maxRows={6}
-                    value={article.text}
-                    onChange={(e) => handleArticleChange(index, e.target.value)}
-                    placeholder={`请输入内容...`}
-                    variant="outlined"
-                    fullWidth
-                    disabled={loading}
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        minHeight: { xs: '120px', sm: '150px' }
-                      }
-                    }}
-                  />
+                  <Typography variant="body1">
+                    暂无文章
+                  </Typography>
+                  <Button
+                    color="primary"
+                    onClick={handleAddArticle}
+                    sx={{ mt: 2 }}
+                  >
+                    添加文章
+                  </Button>
                 </Box>
-              ))}
+              )}
             </Box>
           </InfiniteScroll>
         );
       case 'overview':
-        return results && (
+        return results && articles.length > 0 && articles[0].text !== '' && (
           <Paper elevation={0} variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Overview results={results} articles={articles} />
-              <ThemeAnalysis results={results} articles={articles} />
+              <Overview 
+                results={results} 
+                articles={articles.map(a => typeof a === 'string' ? a : a.text || '')} 
+              />
+              <ThemeAnalysis 
+                results={results} 
+                articles={articles.map(a => typeof a === 'string' ? a : a.text || '')} 
+              />
             </Box>
           </Paper>
         );
       case 'analysis':
-        return results && (
+        return results && articles.length > 0 && articles[0].text !== '' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {results.individualResults.map((result, index) => (
               <ArticleAnalysisCard
                 key={index}
                 result={result}
-                article={articles[index].text}
+                article={typeof articles[index] === 'string' ? articles[index] : articles[index]?.text || ''}
                 index={index + 1}
               />
             ))}
@@ -457,8 +559,14 @@ function ArticleAnalyzer() {
       <AnalyzerFooter
         onAnalyze={handleAnalyze}
         onAddArticle={handleAddArticle}
+        onSelectAll={handleSelectAll}
+        onDelete={handleDeleteSelected}
         loading={loading}
         disabled={articles.length === 0}
+        isSelecting={isSelecting}
+        selectedCount={selectedArticles.size}
+        totalCount={articles.length}
+        onToggleSelect={handleToggleSelect}
       />
 
       <Snackbar
