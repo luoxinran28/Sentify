@@ -14,13 +14,13 @@ const transformScenario = (row) => ({
 });
 
 class ScenarioService {
-  async createScenario(data) {
+  async createScenario(userId, data) {
     try {
       const result = await query(
         `INSERT INTO scenarios (title_en, title_zh, source, prompt, user_id)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [data.titleEn, data.titleZh, data.source, data.prompt, data.userId]
+        [data.titleEn, data.titleZh, data.source, data.prompt, userId]
       );
 
       return transformScenario(result.rows[0]);
@@ -84,18 +84,47 @@ class ScenarioService {
 
   async deleteScenario(id, userId) {
     try {
-      const result = await query(
-        `DELETE FROM scenarios
-         WHERE id = $1 AND user_id = $2
-         RETURNING *`,
-        [id, userId]
-      );
+      // 开始事务
+      await query('BEGIN');
 
-      if (result.rows.length === 0) {
-        throw new Error('场景不存在或无权限删除');
+      try {
+        // 首先删除场景相关的分析结果
+        await query(
+          `DELETE FROM analysis_results
+           WHERE article_id IN (
+             SELECT id FROM articles WHERE scenario_id = $1
+           )`,
+          [id]
+        );
+
+        // 然后删除场景相关的文章
+        await query(
+          `DELETE FROM articles
+           WHERE scenario_id = $1`,
+          [id]
+        );
+
+        // 最后删除场景本身
+        const result = await query(
+          `DELETE FROM scenarios
+           WHERE id = $1 AND user_id = $2
+           RETURNING *`,
+          [id, userId]
+        );
+
+        if (result.rows.length === 0) {
+          throw new Error('场景不存在或无权限删除');
+        }
+
+        // 提交事务
+        await query('COMMIT');
+
+        return transformScenario(result.rows[0]);
+      } catch (error) {
+        // 如果出错，回滚事务
+        await query('ROLLBACK');
+        throw error;
       }
-
-      return transformScenario(result.rows[0]);
     } catch (error) {
       console.error('删除场景失败:', error);
       throw error;

@@ -45,17 +45,20 @@ exports.updateScenario = async (req, res) => {
 
 exports.deleteScenario = async (req, res) => {
   try {
-    await scenarioService.deleteScenario(req.params.id);
+    const { id } = req.params;
+    const userId = req.user.id;  // 从认证中间件获取用户ID
+    
+    await scenarioService.deleteScenario(id, userId);
+    
     res.json({
       success: true,
       message: '场景删除成功'
     });
   } catch (error) {
+    console.error('删除场景失败:', error);
     res.status(500).json({
       success: false,
       message: error.message
     });
   }
 };
-
-// ... 其他控制器方法保持不变 ... 
