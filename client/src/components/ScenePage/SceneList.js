@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { scenarioService } from '../../services/scenarioService';
 import SceneCard from './SceneCard';
 import SceneHeader from './SceneHeader';
-import AddSceneDialog from './AddSceneDialog';
+import AddSceneDialog from './Dialogs/AddSceneDialog';
 import LoadingSpinner from '../common/LoadingSpinner';
 import InfiniteScroll from '../common/InfiniteScroll';
 import EditSceneDialog from './Dialogs/EditSceneDialog';

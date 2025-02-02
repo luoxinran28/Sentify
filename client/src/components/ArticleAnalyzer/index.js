@@ -1,1 +1,1 @@
-export { default } from './ArticleAnalyzer'; 
+export { default } from './components/ArticlesPage/ArticleList'; 
