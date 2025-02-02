@@ -48,7 +48,7 @@ const GradientHeader = styled(Paper)(({ theme }) => ({
   }
 }));
 
-function AnalyzerHeader({ onUpload, onClearCache, currentTab = 'articles', onTabChange }) {
+function AnalyzerHeader({ onUpload, onClear, currentTab = 'articles', onTabChange }) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -71,7 +71,7 @@ function AnalyzerHeader({ onUpload, onClearCache, currentTab = 'articles', onTab
 
   const handleClearCache = () => {
     handleClose();
-    onClearCache();
+    onClear();
   };
 
   return (

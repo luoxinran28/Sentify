@@ -9,7 +9,12 @@ import {
   Box,
   Divider
 } from '@mui/material';
-import { DensityMedium, Edit as EditIcon } from '@mui/icons-material';
+import { 
+  DensityMedium, 
+  Edit as EditIcon,
+  Add as AddIcon,
+  Logout as LogoutIcon
+} from '@mui/icons-material';
 
 function SceneHeader({ menuItems = [], isEditing, onToggleEdit }) {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -27,10 +32,30 @@ function SceneHeader({ menuItems = [], isEditing, onToggleEdit }) {
     onClick?.();
   };
 
-  const handleEditClick = () => {
-    handleClose();
-    onToggleEdit();
-  };
+  // 将编辑选项也加入到菜单项数组中
+  const allMenuItems = [
+    {
+      label: isEditing ? '退出编辑' : '编辑场景',
+      icon: EditIcon,
+      onClick: onToggleEdit,
+      sx: {
+        color: isEditing ? 'text.secondary' : 'inherit'
+      }
+    },
+    {
+      label: '添加场景',
+      icon: AddIcon,
+      onClick: () => menuItems.find(item => item.label === '添加场景')?.onClick(),
+      disabledInEdit: true
+    },
+    { type: 'divider' },
+    {
+      label: '退出登录',
+      icon: LogoutIcon,
+      onClick: () => menuItems.find(item => item.label === '退出登录')?.onClick(),
+      disabledInEdit: true
+    }
+  ];
 
   return (
     <AppBar position="static" color="default" elevation={1}>
@@ -51,25 +76,20 @@ function SceneHeader({ menuItems = [], isEditing, onToggleEdit }) {
             open={Boolean(anchorEl)}
             onClose={handleClose}
           >
-            <MenuItem 
-              onClick={handleEditClick}
-              sx={{
-                color: isEditing ? 'text.secondary' : 'inherit'
-              }}
-            >
-              <EditIcon sx={{ mr: 1, fontSize: 20 }} />
-              {isEditing ? '退出编辑' : '编辑场景'}
-            </MenuItem>
-            <Divider />
-            {menuItems.map((item, index) => (
-              <MenuItem 
-                key={index}
-                onClick={() => handleMenuItemClick(item.onClick)}
-                disabled={isEditing && item.disabledInEdit}
-              >
-                {item.icon && <item.icon sx={{ mr: 1, fontSize: 20 }} />}
-                {item.label}
-              </MenuItem>
+            {allMenuItems.map((item, index) => (
+              item.type === 'divider' ? (
+                <Divider key={`divider-${index}`} />
+              ) : (
+                <MenuItem 
+                  key={item.label}
+                  onClick={() => handleMenuItemClick(item.onClick)}
+                  disabled={isEditing && item.disabledInEdit}
+                  sx={item.sx}
+                >
+                  {item.icon && <item.icon sx={{ mr: 1, fontSize: 20 }} />}
+                  {item.label}
+                </MenuItem>
+              )
             ))}
           </Menu>
         </Box>

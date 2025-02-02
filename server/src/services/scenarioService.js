@@ -130,6 +130,28 @@ class ScenarioService {
       throw error;
     }
   }
+
+  async getScenarioById(id) {
+    try {
+      const result = await query(
+        `SELECT id, title_en as "titleEn", title_zh as "titleZh", 
+                source, prompt, created_at as "createdAt", 
+                updated_at as "updatedAt"
+         FROM scenarios 
+         WHERE id = $1`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return result.rows[0];
+    } catch (error) {
+      console.error('获取场景详情错误:', error);
+      throw new Error('获取场景详情失败');
+    }
+  }
 }
 
 module.exports = new ScenarioService(); 

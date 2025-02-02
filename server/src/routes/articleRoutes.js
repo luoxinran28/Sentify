@@ -12,4 +12,10 @@ router.post('/:scenarioId/analyze', articleController.analyzeArticles);
 router.post('/:scenarioId/clear', articleController.clearArticles);
 router.delete('/:scenarioId', articleController.deleteArticles);
 
+// 清空指定场景下的所有文章
+router.post(
+  '/:scenarioId/clear',
+  articleController.clearArticles.bind(articleController)
+);
+
 module.exports = router; 

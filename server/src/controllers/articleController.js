@@ -1,6 +1,7 @@
 const analysisService = require('../services/analysis/analysisService');
 const articleService = require('../services/article/articleService');
 const databaseService = require('../services/database/databaseService');
+const scenarioService = require('../services/scenarioService');
 
 exports.analyzeArticles = async (req, res) => {
   try {
@@ -62,12 +63,24 @@ exports.getArticles = async (req, res) => {
 exports.clearArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
-    await analysisService.clearArticles(scenarioId);
-    res.json({ success: true, message: '数据已清空' });
+    
+    // 验证场景是否存在
+    const scenario = await scenarioService.getScenarioById(scenarioId);
+    if (!scenario) {
+      return res.status(404).json({ message: '场景不存在' });
+    }
+
+    const result = await articleService.clearArticles(scenarioId);
+    
+    res.json({
+      success: true,
+      message: `成功清空 ${result.deletedCount} 篇文章`,
+      ...result
+    });
   } catch (error) {
+    console.error('清空文章错误:', error);
     res.status(500).json({ 
-      error: '清空数据失败',
-      details: error.message 
+      message: error.message || '清空文章失败'
     });
   }
 };

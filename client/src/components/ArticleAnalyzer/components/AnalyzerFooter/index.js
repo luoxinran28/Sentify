@@ -36,7 +36,8 @@ const ButtonGroup = styled(Box)(({ theme }) => ({
   backdropFilter: 'blur(8px)',
   borderRadius: theme.shape.borderRadius,
   border: `1px solid ${theme.palette.divider}`,
-  overflow: 'hidden'
+  overflow: 'hidden',
+  "z-index": `20`
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -126,7 +127,8 @@ const AnalyzerFooter = ({
           </ActionButton>
         </ButtonGroup>
 
-        <Slide direction="up" in={isSelecting} mountOnEnter unmountOnExit>
+        <Slide direction="up" in={isSelecting} mountOnEnter unmountOnExit 
+          sx={{ left: 'auto'}}>
           <ActionPanel>
             <Box sx={{ 
               display: 'flex', 
@@ -143,16 +145,6 @@ const AnalyzerFooter = ({
               >
                 删除
               </ActionButton>
-              {selectedCount > 0 && (
-                <Box sx={{ 
-                  ml: 2,
-                  color: 'text.secondary',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  已选择 {selectedCount}/{totalCount} 篇文章
-                </Box>
-              )}
             </Box>
           </ActionPanel>
         </Slide>

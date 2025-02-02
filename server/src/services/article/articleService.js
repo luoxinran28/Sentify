@@ -78,6 +78,38 @@ class ArticleService {
       throw new Error(`删除文章失败: ${error.message}`);
     }
   }
+
+  async clearArticles(scenarioId) {
+    try {
+      await query('BEGIN');
+
+      // 首先删除该场景下所有文章的分析结果
+      await query(
+        `DELETE FROM analysis_results 
+         WHERE scenario_id = $1`,
+        [scenarioId]
+      );
+
+      // 然后删除该场景下的所有文章
+      const result = await query(
+        `DELETE FROM articles 
+         WHERE scenario_id = $1
+         RETURNING id`,
+        [scenarioId]
+      );
+
+      await query('COMMIT');
+
+      return {
+        success: true,
+        deletedCount: result.rows.length
+      };
+    } catch (error) {
+      await query('ROLLBACK');
+      console.error('清空文章错误:', error);
+      throw new Error(`清空文章失败: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new ArticleService(); 
