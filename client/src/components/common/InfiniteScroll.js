@@ -25,10 +25,10 @@ const InfiniteScroll = ({
     const container = containerRef?.current || document.documentElement;
     const { scrollTop, clientHeight, scrollHeight } = container;
     
-    if (scrollHeight - scrollTop <= clientHeight * threshold) {
+    if (!loading && hasMore && scrollHeight - scrollTop <= clientHeight * threshold) {
       debouncedLoadMore();
     }
-  }, [debouncedLoadMore, containerRef, threshold]);
+  }, [debouncedLoadMore, containerRef, threshold, loading, hasMore]);
 
   useEffect(() => {
     const container = containerRef?.current || window;
@@ -39,7 +39,7 @@ const InfiniteScroll = ({
   return (
     <>
       {children}
-      {hasMore && (
+      {loading && hasMore && (
         <Box 
           sx={{ 
             display: 'flex', 

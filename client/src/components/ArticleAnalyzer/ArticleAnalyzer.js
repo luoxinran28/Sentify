@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Container, 
   Box, 
@@ -10,26 +10,23 @@ import {
   Alert,
   Input,
   Typography,
-  Checkbox,
-  Card,
-  CardContent,
-  CardActions
+  Checkbox
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon, Close as CloseIcon, Margin } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { useLocation, useParams } from 'react-router-dom';
-// import { analyzeArticles, clearArticles, getScenarioArticles } from '../../services/articleService';
 import { articleService } from '../../services/articleService';
 import AnalyzerHeader from './AnalyzerHeader';
 import { Overview, ThemeAnalysis, ArticleAnalysisCard } from './AnalysisResults';
 import InfiniteScroll from '../common/InfiniteScroll';
 import AnalyzerFooter from './AnalyzerFooter';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 function ArticleAnalyzer() {
   const location = useLocation();
   const { scene } = location.state || {};
   const { scenarioId } = useParams();
-  const [articles, setArticles] = useState([{ text: '' }]);
+  const [articles, setArticles] = useState([]);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -47,11 +44,12 @@ function ArticleAnalyzer() {
   const [showNewArticleCard, setShowNewArticleCard] = useState(false);
 
   const fileInputRef = useRef(null);
+  const newArticleCardRef = useRef(null);
 
-  const loadScenarioArticles = async (pageNum) => {
+  const loadScenarioArticles = useCallback(async (pageNum, limit) => {
     try {
       setLoading(true);
-      const data = await articleService.getScenarioArticles(scenarioId, pageNum);
+      const data = await articleService.getScenarioArticles(scenarioId, pageNum, limit);
       
       if (data.articles && data.articles.length > 0) {
         const newArticles = data.articles.map(article => ({ 
@@ -69,14 +67,16 @@ function ArticleAnalyzer() {
         setHasMore(data.pagination.currentPage < data.pagination.totalPages);
         
         analyzeNewArticles(newArticles);
-      } 
+      } else {
+        setHasMore(false);  // 如果没有文章，设置 hasMore 为 false
+      }
     } catch (error) {
       console.error('加载场景文章错误:', error);
       setError(error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [scenarioId]);
 
   /**
    * 分析新载入的文章并更新状态
@@ -195,6 +195,13 @@ function ArticleAnalyzer() {
     setShowNewArticleCard(true);
     setNewArticle('');
     setError('');
+    
+    setTimeout(() => {
+      newArticleCardRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }, 100);
   };
 
   const handleCancelAdd = () => {
@@ -528,8 +535,9 @@ function ArticleAnalyzer() {
         return (
           <InfiniteScroll
             loading={loading}
-            hasMore={hasMore}
+            hasMore={hasMore && articles.length > 0}
             onLoadMore={handleLoadMore}
+            loadingSpinner={<LoadingSpinner />}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {articles.length > 0 ? (
@@ -541,20 +549,14 @@ function ArticleAnalyzer() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    py: 8,
+                    pt: 3,
+                    pb: 1,
                     color: 'text.secondary'
                   }}
                 >
                   <Typography variant="body1">
-                    暂无文章
+                    点击下方"添加"，开始你的旅程吧！
                   </Typography>
-                  <Button
-                    color="primary"
-                    onClick={handleAddArticle}
-                    sx={{ mt: 2 }}
-                  >
-                    添加文章
-                  </Button>
                 </Box>
               )}
             </Box>
@@ -646,9 +648,10 @@ function ArticleAnalyzer() {
       {/* 新文章输入卡片 */}
       {showNewArticleCard && (
         <Paper 
+          ref={newArticleCardRef}
           sx={{ 
             p: 2, 
-            mb: 2, 
+            mb: 2,
             ml: 2,
             mr: 2,
             position: 'relative',
