@@ -1,12 +1,12 @@
 const axios = require('axios');
-const { COMMENT_ANALYSIS_PROMPT } = require('../prompts/commentAnalysis');
+const databaseService = require('./database/databaseService');
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 const MAX_ARTICLES = 20;
 const MAX_ARTICLE_LENGTH = 1000;
 
 class DeepseekService {
-  async analyze(articles) {
+  async analyze(articles, scenarioId, userId) {
     try {
       // 验证文章数量和长度
       if (articles.length > MAX_ARTICLES) {
@@ -18,6 +18,9 @@ class DeepseekService {
         throw new Error(`文章长度超过限制 (最大${MAX_ARTICLE_LENGTH}字符)`);
       }
 
+      // 从数据库获取场景的prompt
+      const prompt = await databaseService.getScenarioPrompt(scenarioId, userId);
+
       const response = await axios.post(
         DEEPSEEK_API_URL,
         {
@@ -25,7 +28,7 @@ class DeepseekService {
           messages: [
             {
               role: "system",
-              content: COMMENT_ANALYSIS_PROMPT
+              content: prompt
             },
             {
               role: "user",
@@ -40,13 +43,12 @@ class DeepseekService {
             'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          timeout: 120000 // 增加到120秒
+          timeout: 120000
         }
       );
 
       const result = JSON.parse(response.data.choices[0].message.content);
       
-      // 验证和格式化响应数据
       return this._validateAndFormatResponse(result);
     } catch (error) {
       console.error('DeepSeek API 错误:', error);

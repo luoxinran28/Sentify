@@ -85,6 +85,25 @@ class DatabaseService {
       throw error;
     }
   }
+
+  async getScenarioPrompt(scenarioId, userId) {
+    try {
+      const result = await query(
+        `SELECT prompt 
+         FROM scenarios 
+         WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error('场景不存在或无权访问');
+      }
+      
+      return result.rows[0].prompt;
+    } catch (err) {
+      throw err;
+    }
+  }
 }
 
 // 导出单例

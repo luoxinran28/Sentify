@@ -7,6 +7,7 @@ exports.analyzeArticles = async (req, res) => {
   try {
     const { articles } = req.body;
     const { scenarioId } = req.params;
+    const userId = req.user.id;
     
     if (!Array.isArray(articles) || articles.length === 0) {
       return res.status(400).json({ error: '文章内容不能为空' });
@@ -20,7 +21,7 @@ exports.analyzeArticles = async (req, res) => {
       return res.status(400).json({ error: '没有有效的文章内容' });
     }
 
-    const analysisResult = await analysisService.analyzeArticles(validArticles, scenarioId);
+    const analysisResult = await analysisService.analyzeArticles(validArticles, scenarioId, userId);
     
     const results = {
       totalArticles: validArticles.length,
@@ -46,11 +47,13 @@ exports.getArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
     const { page = 1, limit = 5 } = req.query;
+    const userId = req.user.id;
     
     const result = await articleService.getArticlesByScenario(
       scenarioId,
       parseInt(page),
-      parseInt(limit)
+      parseInt(limit),
+      userId
     );
     
     res.json(result);
@@ -63,14 +66,15 @@ exports.getArticles = async (req, res) => {
 exports.clearArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
+    const userId = req.user.id;
     
-    // 验证场景是否存在
-    const scenario = await scenarioService.getScenarioById(scenarioId);
+    // 验证场景是否存在且属于当前用户
+    const scenario = await scenarioService.getScenarioById(scenarioId, userId);
     if (!scenario) {
-      return res.status(404).json({ message: '场景不存在' });
+      return res.status(404).json({ message: '场景不存在或无权访问' });
     }
 
-    const result = await articleService.clearArticles(scenarioId);
+    const result = await articleService.clearArticles(scenarioId, userId);
     
     res.json({
       success: true,
@@ -89,14 +93,15 @@ exports.getScenarioArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
     const { page = 1, limit = 5 } = req.query;
+    const userId = req.user.id;
     
     const data = await articleService.getArticlesByScenario(
       scenarioId,
       parseInt(page),
-      parseInt(limit)
+      parseInt(limit),
+      userId
     );
     
-    // 确保返回格式一致
     res.json(data);
   } catch (error) {
     console.error('获取场景文章失败:', error);
@@ -111,6 +116,7 @@ exports.deleteArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
     const { articleIds } = req.body;
+    const userId = req.user.id;
 
     if (!Array.isArray(articleIds) || articleIds.length === 0) {
       return res.status(400).json({ 
@@ -119,7 +125,7 @@ exports.deleteArticles = async (req, res) => {
       });
     }
 
-    await articleService.deleteArticles(scenarioId, articleIds);
+    await articleService.deleteArticles(scenarioId, articleIds, userId);
     
     res.json({ 
       success: true, 

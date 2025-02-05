@@ -3,10 +3,20 @@ const deepseekService = require('../deepseekService');
 const crypto = require('crypto');
 
 class AnalysisService {
-  async analyzeArticles(articles, scenarioId) {
+  async analyzeArticles(articles, scenarioId, userId) {
     try {
+      // 首先验证用户对场景的访问权限
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('无权访问该场景或场景不存在');
+      }
+
       // 检查缓存
-      const cachedResults = await this._getCachedResults(articles, scenarioId);
+      const cachedResults = await this._getCachedResults(articles, scenarioId, userId);
 
       // 如果所有文章都有缓存，直接返回
       if (cachedResults.every(result => result !== null)) {
@@ -20,11 +30,11 @@ class AnalysisService {
       // 获取未缓存的文章
       const uncachedArticles = articles.filter((_, index) => !cachedResults[index]);
       
-      // 调用 API 分析未缓存的文章
-      const apiResult = await deepseekService.analyze(uncachedArticles);
+      // 调用 API 分析未缓存的文章，传入userId
+      const apiResult = await deepseekService.analyze(uncachedArticles, scenarioId, userId);
 
       // 保存新的分析结果到数据库
-      await this._saveAnalysisResults(uncachedArticles, apiResult.analyses, scenarioId);
+      await this._saveAnalysisResults(uncachedArticles, apiResult.analyses, scenarioId, userId);
 
       // 合并缓存和新分析的结果
       const finalResults = this._mergeCachedAndNewResults(articles, cachedResults, apiResult.analyses);
@@ -40,7 +50,7 @@ class AnalysisService {
     }
   }
 
-  async _getCachedResults(articles, scenarioId) {
+  async _getCachedResults(articles, scenarioId, userId) {
     return Promise.all(
       articles.map(async (article) => {
         try {
@@ -54,12 +64,14 @@ class AnalysisService {
               ar.translated_highlights as "translatedHighlights"
              FROM analysis_results ar
              JOIN articles a ON ar.article_id = a.id
+             JOIN scenarios s ON a.scenario_id = s.id
              WHERE a.content_hash = $1 
              AND a.scenario_id = $2
+             AND s.user_id = $3
              AND (ar.expires_at IS NULL OR ar.expires_at > NOW())
              ORDER BY ar.created_at DESC
              LIMIT 1`,
-            [contentHash, scenarioId]
+            [contentHash, scenarioId, userId]
           );
           return result.rows[0] || null;
         } catch (error) {
@@ -70,8 +82,18 @@ class AnalysisService {
     );
   }
 
-  async _saveAnalysisResults(articles, results, scenarioId) {
+  async _saveAnalysisResults(articles, results, scenarioId, userId) {
     try {
+      // 首先验证用户对场景的访问权限
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('无权访问该场景或场景不存在');
+      }
+
       await query('BEGIN');
       for (let i = 0; i < articles.length; i++) {
         const contentHash = this._generateContentHash(articles[i]);
@@ -152,8 +174,18 @@ class AnalysisService {
     });
   }
 
-  async getScenarioArticles(scenarioId) {
+  async getScenarioArticles(scenarioId, userId) {
     try {
+      // 首先验证用户是否有权限访问该场景
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('无权访问该场景或场景不存在');
+      }
+
       const result = await query(
         `SELECT 
           a.id as article_id,
@@ -165,9 +197,11 @@ class AnalysisService {
           ar.translated_highlights as "translatedHighlights"
          FROM articles a
          LEFT JOIN analysis_results ar ON a.id = ar.article_id
+         JOIN scenarios s ON a.scenario_id = s.id
          WHERE a.scenario_id = $1
+         AND s.user_id = $2
          ORDER BY a.created_at DESC`,
-        [scenarioId]
+        [scenarioId, userId]
       );
 
       const articles = result.rows;
