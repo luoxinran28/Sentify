@@ -58,9 +58,15 @@ function SceneHeader({ menuItems = [], isEditing, onToggleEdit }) {
   ];
 
   return (
-    <AppBar position="static" color="default" elevation={1}>
+    <AppBar position="static" elevation={1} 
+      sx={{ 
+        backgroundColor: '#051923'
+        }}
+      >
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1,
+          color: '#fefefe'
+         }}>
           Sentify
         </Typography>
         <Box>

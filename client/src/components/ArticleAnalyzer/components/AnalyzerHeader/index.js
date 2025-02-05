@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  AppBar,
   Toolbar,
   Typography,
   IconButton,
@@ -17,22 +16,21 @@ import {
   Apps as AppsIcon,
   Upload as UploadIcon,
   Clear as ClearIcon,
-  Add as AddIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import PropTypes from 'prop-types';
+import useScrollCompact from '../../../../hooks/useScrollCompact';
 
-const GradientHeader = styled(Paper)(({ theme }) => ({
+const GradientHeader = styled(Paper)(({ theme, iscompact }) => ({
   position: 'sticky',
   top: 0,
   zIndex: 1000,
   backgroundColor: 'rgba(255, 255, 255, 0.95)',
   backdropFilter: 'blur(8px)',
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  transition: 'box-shadow 0.3s ease-in-out',
+  transition: 'all 0.3s ease-in-out',
   padding: theme.spacing(1, 2),
-  height: 64,
+  height: iscompact === 'true' ? '40px' : '64px',
   display: 'flex',
   alignItems: 'center',
   '&::after': {
@@ -48,9 +46,37 @@ const GradientHeader = styled(Paper)(({ theme }) => ({
   }
 }));
 
+const StyledToolbar = styled(Toolbar)(({ theme, iscompact }) => ({
+  display: 'grid',
+  gridTemplateColumns: '1fr auto 1fr',
+  alignItems: 'center',
+  minHeight: iscompact === 'true' ? '40px' : '64px',
+  width: '100%',
+  padding: iscompact === 'true' ? theme.spacing(0, 2) : theme.spacing(0, 2),
+  position: 'relative',
+  transition: 'all 0.3s ease-in-out'
+}));
+
+const StyledTabs = styled(Tabs)(({ theme, iscompact }) => ({
+  minHeight: iscompact === 'true' ? '40px' : '48px',
+  transition: 'all 0.3s ease-in-out',
+  '& .MuiTab-root': {
+    minHeight: iscompact === 'true' ? '40px' : '48px',
+    transition: 'all 0.3s ease-in-out',
+    color: 'rgba(0, 0, 0, 0.42)',
+    '&.Mui-selected': {
+      color: 'rgba(0, 0, 0, 0.87)'
+    }
+  },
+  '& .MuiTabs-indicator': {
+    backgroundColor: 'rgba(0, 0, 0, 0.87)'
+  }
+}));
+
 function AnalyzerHeader({ onUpload, onClear, currentTab = 'articles', onTabChange }) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
+  const isCompact = useScrollCompact(50);
 
   const handleBack = () => {
     navigate('/');
@@ -75,50 +101,39 @@ function AnalyzerHeader({ onUpload, onClear, currentTab = 'articles', onTabChang
   };
 
   return (
-    <GradientHeader>
-      <Toolbar sx={{ 
-        display: 'grid',
-        gridTemplateColumns: '1fr auto 1fr',
-        alignItems: 'center',
-        minHeight: 64,
-        width: '100%',
-        px: 2,
-        position: 'relative'
-      }}>
-        {/* 左侧区域 */}
+    <GradientHeader iscompact={isCompact.toString()}>
+      <StyledToolbar iscompact={isCompact.toString()}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <IconButton
             edge="start"
-            color="inherit"
+            sx={{ color: 'rgba(0, 0, 0, 0.87)' }}
             aria-label="back"
             onClick={handleBack}
           >
             <ArrowBackIcon />
           </IconButton>
-
         </Box>
 
-        {/* 中间的 Tabs */}
         <Box>
-          <Tabs 
+          <StyledTabs 
             value={currentTab} 
             onChange={onTabChange}
-            textColor="primary"
-            indicatorColor="primary"
+            iscompact={isCompact.toString()}
           >
             <Tab label="文章" value="articles" />
             <Tab label="概要" value="overview" />
             <Tab label="分析" value="analysis" />
-          </Tabs>
+          </StyledTabs>
         </Box>
 
-        {/* 右侧工具菜单 */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <IconButton
-            color="inherit"
+            sx={{ 
+              padding: 0,
+              color: 'rgba(0, 0, 0, 0.87)'
+            }}
             onClick={handleToolsClick}
             size="large"
-            sx={{ padding: 0 }}
           >
             <AppsIcon />
           </IconButton>
@@ -136,18 +151,17 @@ function AnalyzerHeader({ onUpload, onClear, currentTab = 'articles', onTabChang
             }}
           >
             <MenuItem onClick={handleUpload}>
-              <UploadIcon sx={{ mr: 1 }} />
+              <UploadIcon sx={{ mr: 1, color: 'rgba(0, 0, 0, 0.87)' }} />
               批量上传
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleClearCache}>
-              <ClearIcon sx={{ mr: 1 }} />
+              <ClearIcon sx={{ mr: 1, color: 'rgba(0, 0, 0, 0.87)' }} />
               清空数据
             </MenuItem>
           </Menu>
         </Box>
-      </Toolbar>
-      
+      </StyledToolbar>
     </GradientHeader>
   );
 }
