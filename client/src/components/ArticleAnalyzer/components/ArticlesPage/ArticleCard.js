@@ -27,8 +27,8 @@ const ArticleCard = ({
     ? article 
     : article.text || '';
   
-  const truncatedPreview = previewText.length > 20 
-    ? `${previewText.substring(0, 20)}...` 
+  const truncatedPreview = previewText.length > 28 
+    ? `${previewText.substring(0, 28)}...` 
     : previewText;
 
   return (

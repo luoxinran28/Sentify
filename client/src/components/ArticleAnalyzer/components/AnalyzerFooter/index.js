@@ -63,7 +63,8 @@ const ActionButton = styled(Button)(({ theme }) => ({
 const ActionPanel = styled(Box)(({ theme, iscompact }) => ({
   position: 'absolute',
   bottom: iscompact === 'true' ? 40 : 48,
-  left: '50%',
+  left: 'auto',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   transform: 'translateX(-50%)',
   padding: theme.spacing(1),
   backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -89,7 +90,9 @@ const AnalyzerFooter = ({
   isSelecting,
   selectedCount,
   totalCount,
-  onToggleSelect
+  onToggleSelect,
+  expandedCount,
+  onExpandAll
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const isCompact = useScrollCompact(50);
@@ -140,6 +143,14 @@ const AnalyzerFooter = ({
               gap: 1,
               position: 'relative'
             }}>
+              <ActionButton
+                onClick={() => onExpandAll(expandedCount < totalCount)}
+              >
+                {expandedCount < totalCount ? '全部展开' : '全部折叠'}
+              </ActionButton>
+              
+              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(0, 0, 0, 0.12)' }} />
+
               <ActionButton onClick={onSelectAll}>
                 全选
               </ActionButton>

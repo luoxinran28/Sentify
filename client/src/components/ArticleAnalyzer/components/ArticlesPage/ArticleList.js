@@ -468,22 +468,6 @@ const ArticleList = () => {
             loadingSpinner={<LoadingSpinner />}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {articles.length > 0 && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-end',
-                  mb: 1
-                }}>
-                  <Button
-                    size="small"
-                    onClick={() => handleExpandAll(expandedArticles.size < articles.length)}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    {expandedArticles.size < articles.length ? '全部展开' : '全部折叠'}
-                  </Button>
-                </Box>
-              )}
-              
               {articles.length > 0 ? (
                 articles.map((article, index) => (
                   <ArticleCard
@@ -565,6 +549,8 @@ const ArticleList = () => {
         selectedCount={selectedArticles.size}
         totalCount={articles.length}
         onToggleSelect={handleToggleSelect}
+        expandedCount={expandedArticles.size}
+        onExpandAll={handleExpandAll}
       />
 
       <Snackbar
