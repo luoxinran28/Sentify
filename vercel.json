@@ -6,6 +6,10 @@
     {
       "source": "/api/:path*",
       "destination": "/api/server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/client/build/$1"
     }
   ],
   "functions": {
@@ -13,5 +17,8 @@
       "memory": 1024,
       "maxDuration": 60
     }
+  },
+  "env": {
+    "NODE_ENV": "production"
   }
 } 
