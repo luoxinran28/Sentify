@@ -35,11 +35,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'X-Access-Code']
 }));
 
+// 路径处理中间件
+app.use((req, res, next) => {
+  // 移除 /api 前缀
+  if (req.path.startsWith('/api/')) {
+    req.url = req.url.replace('/api', '');
+  }
+  next();
+});
+
 // 请求日志中间件
 app.use((req, res, next) => {
   const startTime = Date.now();
   console.log('收到请求:', {
+    originalUrl: req.originalUrl,
     path: req.path,
+    url: req.url,
     method: req.method,
     headers: req.headers
   });
@@ -50,7 +61,9 @@ app.use((req, res, next) => {
     console.log('请求完成:', {
       timestamp: new Date().toISOString(),
       method: req.method,
+      originalUrl: req.originalUrl,
       path: req.path,
+      url: req.url,
       status: res.statusCode,
       duration: `${duration}ms`,
       userAgent: req.get('user-agent'),
@@ -61,7 +74,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// API 路由 - 注意这里移除了 /api 前缀，因为 Vercel 已经处理了
+// API 路由
 app.use('/auth', authRoutes);
 
 // 健康检查端点
@@ -71,10 +84,15 @@ app.get('/health', (req, res) => {
 
 // 404 处理
 app.use((req, res) => {
-  console.log('404 未找到:', req.path);
+  console.log('404 未找到:', {
+    originalUrl: req.originalUrl,
+    path: req.path,
+    url: req.url
+  });
   res.status(404).json({
     error: '未找到请求的资源',
     path: req.path,
+    originalUrl: req.originalUrl,
     code: 404
   });
 });
@@ -85,6 +103,7 @@ app.use((err, req, res, next) => {
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     path: req.path,
+    originalUrl: req.originalUrl,
     method: req.method,
     headers: {
       ...req.headers,
