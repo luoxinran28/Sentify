@@ -3,8 +3,13 @@ import {
   Paper, 
   Box, 
   TextField, 
-  Checkbox 
+  Checkbox,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const ArticleCard = ({ 
   article, 
@@ -13,51 +18,96 @@ const ArticleCard = ({
   isSelected,
   loading,
   onArticleChange,
-  onClick
+  onClick,
+  expanded,
+  onChange
 }) => {
+  // 获取文章预览文本
+  const previewText = typeof article === 'string' 
+    ? article 
+    : article.text || '';
+  
+  const truncatedPreview = previewText.length > 20 
+    ? `${previewText.substring(0, 20)}...` 
+    : previewText;
+
   return (
-    <Paper 
-      sx={{ 
-        p: 2, 
-        mb: 2, 
-        position: 'relative',
+    <Accordion
+      expanded={expanded}
+      onChange={onChange}
+      sx={{
+        mb: 1,
+        '&:before': {
+          display: 'none',
+        },
         transition: 'all 0.2s ease-in-out',
-        cursor: isSelecting ? 'pointer' : 'default',
         bgcolor: isSelecting && isSelected ? 'action.selected' : 'background.paper',
         '&:hover': isSelecting ? {
           bgcolor: 'action.hover'
         } : {}
       }}
-      onClick={onClick}
     >
-      <Box sx={{ 
-        display: 'flex',
-        alignItems: 'center',
-        mb: 1,
-        color: 'text.secondary',
-        typography: 'body2'
-      }}>
-        原文{index + 1}
-      </Box>
-      {isSelecting && (
-        <Checkbox
-          checked={isSelected}
-          sx={{ 
-            position: 'absolute', 
-            right: 8, 
-            top: 8,
-            pointerEvents: 'none'  // 防止复选框捕获点击事件
-          }}
-        />
-      )}
-      <Box sx={{ 
-        pl: isSelecting ? 0 : 0,
-        transition: 'padding-left 0.2s ease-in-out'
-      }}>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        onClick={(e) => {
+          if (isSelecting) {
+            e.stopPropagation();
+            onClick();
+          }
+        }}
+        sx={{
+          minHeight: 48,
+          cursor: isSelecting ? 'pointer' : 'default',
+          '& .MuiAccordionSummary-content': {
+            alignItems: 'center'
+          }
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          flex: 1,
+          gap: 2
+        }}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ minWidth: 60 }}
+          >
+            原文{index + 1}
+          </Typography>
+          
+          {!expanded && (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                flex: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {truncatedPreview}
+            </Typography>
+          )}
+          
+          {isSelecting && (
+            <Checkbox
+              checked={isSelected}
+              sx={{ 
+                ml: 'auto',
+                pointerEvents: 'none'
+              }}
+            />
+          )}
+        </Box>
+      </AccordionSummary>
+      
+      <AccordionDetails>
         <TextField
           multiline
           minRows={4}
-          maxRows={6}
           value={typeof article === 'string' ? article : article.text || ''}
           onChange={(e) => onArticleChange(e.target.value)}
           placeholder="请输入内容..."
@@ -66,18 +116,21 @@ const ArticleCard = ({
           disabled={loading || isSelecting}
           onClick={(e) => {
             if (isSelecting) {
-              e.stopPropagation();  // 防止文本框点击触发卡片选择
+              e.stopPropagation();
             }
           }}
           sx={{
             '& .MuiInputBase-root': {
-              minHeight: { xs: '120px', sm: '150px' },
-              backgroundColor: 'background.paper'
+              minHeight: '120px',
+              height: 'auto'
+            },
+            '& .MuiInputBase-input': {
+              maxHeight: 'none'
             }
           }}
         />
-      </Box>
-    </Paper>
+      </AccordionDetails>
+    </Accordion>
   );
 };
 

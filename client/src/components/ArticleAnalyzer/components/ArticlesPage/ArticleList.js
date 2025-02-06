@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Box, Typography, Container, Snackbar, Alert, Input } from '@mui/material';
+import { Box, Typography, Container, Snackbar, Alert, Input, Button } from '@mui/material';
 import { useLocation, useParams } from 'react-router-dom';
 import { articleService } from '../../../../services/articleService';
 import InfiniteScroll from '../../../common/InfiniteScroll';
@@ -35,6 +35,7 @@ const ArticleList = () => {
   const [selectedArticles, setSelectedArticles] = useState(new Set());
   const [newArticle, setNewArticle] = useState('');
   const [showNewArticleCard, setShowNewArticleCard] = useState(false);
+  const [expandedArticles, setExpandedArticles] = useState(new Set());
 
   const fileInputRef = useRef(null);
   const newArticleCardRef = useRef(null);
@@ -436,6 +437,26 @@ const ArticleList = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  // 新增：处理文章展开/折叠
+  const handleAccordionChange = (index) => (event, isExpanded) => {
+    const newExpanded = new Set(expandedArticles);
+    if (isExpanded) {
+      newExpanded.add(index);
+    } else {
+      newExpanded.delete(index);
+    }
+    setExpandedArticles(newExpanded);
+  };
+
+  // 新增：处理全部展开/折叠
+  const handleExpandAll = (expand) => {
+    if (expand) {
+      setExpandedArticles(new Set(articles.map((_, index) => index)));
+    } else {
+      setExpandedArticles(new Set());
+    }
+  };
+
   const renderContent = () => {
     switch (currentTab) {
       case 'articles':
@@ -447,6 +468,22 @@ const ArticleList = () => {
             loadingSpinner={<LoadingSpinner />}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {articles.length > 0 && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  mb: 1
+                }}>
+                  <Button
+                    size="small"
+                    onClick={() => handleExpandAll(expandedArticles.size < articles.length)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {expandedArticles.size < articles.length ? '全部展开' : '全部折叠'}
+                  </Button>
+                </Box>
+              )}
+              
               {articles.length > 0 ? (
                 articles.map((article, index) => (
                   <ArticleCard
@@ -456,6 +493,8 @@ const ArticleList = () => {
                     isSelecting={isSelecting}
                     isSelected={selectedArticles.has(index)}
                     loading={loading}
+                    expanded={expandedArticles.has(index)}
+                    onChange={handleAccordionChange(index)}
                     onArticleChange={(value) => handleArticleChange(index, value)}
                     onClick={() => {
                       if (isSelecting) {
