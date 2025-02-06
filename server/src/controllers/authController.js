@@ -1,23 +1,39 @@
 const authService = require('../services/authService');
 
-exports.verifyCode = async (req, res) => {
+exports.verifyAccessCode = async (req, res) => {
   try {
-    const { code: encryptedCode } = req.body;
+    const encryptedCode = req.headers['x-access-code'];
     
     // 验证码基本验证
     if (!encryptedCode) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: '无效的验证码格式'
+        details: '未提供验证码'
       });
     }
 
     const result = await authService.verifyAndCreateUser(encryptedCode);
-    res.json(result);
+    
+    if (!result.success) {
+      return res.status(401).json({
+        success: false,
+        details: result.message || '验证码无效'
+      });
+    }
+
+    res.json({
+      success: true,
+      user: result.user
+    });
   } catch (error) {
+    console.error('验证处理错误:', {
+      error: error.message,
+      stack: error.stack
+    });
+
     res.status(500).json({
       success: false,
-      message: error.message
+      details: '服务器处理验证请求时出错'
     });
   }
 }; 

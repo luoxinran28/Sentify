@@ -1,10 +1,29 @@
 const express = require('express');
 const cors = require('cors');
-const { verifyAccessCode } = require('../server/src/controllers/authController');
+const authRoutes = require('../server/src/routes/authRoutes');
 const path = require('path');
 require('dotenv').config();
 
+// 全局未捕获异常处理
+process.on('uncaughtException', (error) => {
+  console.error('未捕获的异常:', {
+    error: error.message,
+    stack: error.stack
+  });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('未处理的 Promise 拒绝:', {
+    reason: reason?.message || reason,
+    stack: reason?.stack
+  });
+});
+
 const app = express();
+
+// 请求体大小限制
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // CORS 配置
 app.use(cors({
@@ -16,16 +35,34 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'X-Access-Code']
 }));
 
-app.use(express.json());
-
 // 请求日志中间件
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  const startTime = Date.now();
+  
+  // 响应完成时的日志
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    console.log({
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      userAgent: req.get('user-agent'),
+      ip: req.ip
+    });
+  });
+
   next();
 });
 
-// 验证路由
-app.post('/auth/verify', verifyAccessCode);
+// API 路由
+app.use('/auth', authRoutes);
+
+// 健康检查端点
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // 404 处理
 app.use((req, res) => {
@@ -38,14 +75,21 @@ app.use((req, res) => {
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
-  console.error('API 错误:', {
+  const errorDetails = {
     message: err.message,
-    stack: err.stack,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     path: req.path,
     method: req.method,
+    headers: {
+      ...req.headers,
+      'x-access-code': req.headers['x-access-code'] ? '***' : undefined
+    },
+    query: req.query,
     body: req.body,
-    headers: req.headers
-  });
+    timestamp: new Date().toISOString()
+  };
+
+  console.error('API 错误:', errorDetails);
 
   res.status(err.status || 500).json({
     error: '服务器错误',

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { verifyCode } = require('../controllers/authController');
+const { verifyAccessCode } = require('../controllers/authController');
 
 // 验证码验证路由
-router.post('/verify', verifyCode);
+router.post('/verify', verifyAccessCode);
 
 module.exports = router; 
