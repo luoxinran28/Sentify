@@ -38,11 +38,16 @@ app.use(cors({
 // 请求日志中间件
 app.use((req, res, next) => {
   const startTime = Date.now();
+  console.log('收到请求:', {
+    path: req.path,
+    method: req.method,
+    headers: req.headers
+  });
   
   // 响应完成时的日志
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    console.log({
+    console.log('请求完成:', {
       timestamp: new Date().toISOString(),
       method: req.method,
       path: req.path,
@@ -56,7 +61,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// API 路由
+// API 路由 - 注意这里移除了 /api 前缀，因为 Vercel 已经处理了
 app.use('/auth', authRoutes);
 
 // 健康检查端点
@@ -66,6 +71,7 @@ app.get('/health', (req, res) => {
 
 // 404 处理
 app.use((req, res) => {
+  console.log('404 未找到:', req.path);
   res.status(404).json({
     error: '未找到请求的资源',
     path: req.path,

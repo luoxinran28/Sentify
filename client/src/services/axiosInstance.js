@@ -4,7 +4,7 @@ import CryptoJS from 'crypto-js';
 // 根据环境确定 API URL
 const API_URL = process.env.REACT_APP_API_URL || (
   process.env.NODE_ENV === 'production'
-    ? `${window.location.origin}/api`
+    ? '/api'  // 在生产环境中使用相对路径
     : 'http://localhost:5010/api'
 );
 
@@ -33,8 +33,11 @@ const axiosInstance = axios.create({
 // 请求拦截器
 axiosInstance.interceptors.request.use(
   (config) => {
-    // 添加访问码到请求头
-    config.headers = addAccessCodeHeader(config.headers);
+    console.log('发送请求:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers
+    });
     return config;
   },
   (error) => {
