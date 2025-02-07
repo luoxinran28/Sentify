@@ -1,11 +1,11 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
 
-// 根据环境确定 API URL
+// 根据环境确定 API URL，不需要添加 /api 前缀，因为所有路由都已包含
 const API_URL = process.env.REACT_APP_API_URL || (
   process.env.NODE_ENV === 'production'
-    ? '/api'  // 在生产环境中使用相对路径
-    : 'http://localhost:5010/api'
+    ? ''  // 在生产环境中使用相对路径，因为所有路由都已包含 /api
+    : 'http://localhost:5010'
 );
 
 // 加密函数
@@ -33,6 +33,9 @@ const axiosInstance = axios.create({
 // 请求拦截器
 axiosInstance.interceptors.request.use(
   (config) => {
+    // 添加访问码到请求头
+    config.headers = addAccessCodeHeader(config.headers);
+    
     console.log('发送请求:', {
       url: config.url,
       method: config.method,

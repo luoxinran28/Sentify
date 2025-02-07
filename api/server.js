@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('../server/src/routes/authRoutes');
+const scenarioRoutes = require('../server/src/routes/scenarioRoutes');
+const articleRoutes = require('../server/src/routes/articleRoutes');
 const path = require('path');
 require('dotenv').config();
 
@@ -35,22 +37,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'X-Access-Code']
 }));
 
-// 路径处理中间件
-app.use((req, res, next) => {
-  // 移除 /api 前缀
-  if (req.path.startsWith('/api/')) {
-    req.url = req.url.replace('/api', '');
-  }
-  next();
-});
-
 // 请求日志中间件
 app.use((req, res, next) => {
   const startTime = Date.now();
   console.log('收到请求:', {
     originalUrl: req.originalUrl,
     path: req.path,
-    url: req.url,
     method: req.method,
     headers: req.headers
   });
@@ -61,9 +53,7 @@ app.use((req, res, next) => {
     console.log('请求完成:', {
       timestamp: new Date().toISOString(),
       method: req.method,
-      originalUrl: req.originalUrl,
       path: req.path,
-      url: req.url,
       status: res.statusCode,
       duration: `${duration}ms`,
       userAgent: req.get('user-agent'),
@@ -74,11 +64,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// API 路由
-app.use('/auth', authRoutes);
+// API 路由 - 使用 /api 前缀
+app.use('/api/auth', authRoutes);
+app.use('/api/scenarios', scenarioRoutes);
+app.use('/api/articles', articleRoutes);
 
 // 健康检查端点
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -86,8 +78,7 @@ app.get('/health', (req, res) => {
 app.use((req, res) => {
   console.log('404 未找到:', {
     originalUrl: req.originalUrl,
-    path: req.path,
-    url: req.url
+    path: req.path
   });
   res.status(404).json({
     error: '未找到请求的资源',
@@ -103,7 +94,6 @@ app.use((err, req, res, next) => {
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     path: req.path,
-    originalUrl: req.originalUrl,
     method: req.method,
     headers: {
       ...req.headers,
