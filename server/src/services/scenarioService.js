@@ -30,7 +30,7 @@ class ScenarioService {
     }
   }
 
-  async getScenarios(page = 1, limit = 10) {
+  async getScenarios(page = 1, limit = 20) {
     try {
       const offset = (page - 1) * limit;
       

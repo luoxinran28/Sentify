@@ -46,7 +46,7 @@ exports.analyzeArticles = async (req, res) => {
 exports.getArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
-    const { page = 1, limit = 5 } = req.query;
+    const { page = 1, limit = 20 } = req.query;
     const userId = req.user.id;
     
     const result = await articleService.getArticlesByScenario(
@@ -92,7 +92,7 @@ exports.clearArticles = async (req, res) => {
 exports.getScenarioArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
-    const { page = 1, limit = 5 } = req.query;
+    const { page = 1, limit = 20 } = req.query;
     const userId = req.user.id;
     
     const data = await articleService.getArticlesByScenario(

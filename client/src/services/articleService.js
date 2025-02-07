@@ -13,7 +13,7 @@ export const articleService = {
   },
 
   // 获取场景文章
-  getScenarioArticles: async (scenarioId, page = 1, limit = 5) => {
+  getScenarioArticles: async (scenarioId, page = 1, limit = 20) => {
     try {
       const response = await axios.get(
         `/articles/${scenarioId}?page=${page}&limit=${limit}`
