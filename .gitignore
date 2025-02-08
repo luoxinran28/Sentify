@@ -23,3 +23,6 @@ dist
 # Database
 server/src/database/database.sqlite 
 backups/
+
+# Prompts
+prompts/
