@@ -80,7 +80,6 @@ const ArticleList = () => {
   const analyzeNewArticles = async (newArticles) => {
     try {
       // 筛选出未分析的有效文章（非空且未分析）
-      // 保留文章ID以便后续关联分析结果
       const validArticles = newArticles
         .filter(a => !a.analyzed && a.text?.trim())
         .map(a => ({
@@ -94,7 +93,6 @@ const ArticleList = () => {
       const result = await articleService.analyzeArticles(validArticles.map(a => a.text), scene.id);
       
       // 将分析结果与原文章ID关联
-      // 保持数组顺序与validArticles一致，确保ID对应正确
       const analysisResults = result.individualResults.map((analysis, index) => ({
         ...analysis,
         articleId: validArticles[index].id
@@ -122,7 +120,6 @@ const ArticleList = () => {
         }
         
         // 使用Set进行文章ID去重
-        // 过滤掉null/undefined的ID避免错误
         const existingIds = new Set(
           prevResults.individualResults
             .map(r => r.articleId)
@@ -132,12 +129,6 @@ const ArticleList = () => {
         // 过滤出未分析过的结果
         const newResults = analysisResults.filter(r => !existingIds.has(r.articleId));
 
-        // 合并并去重主题
-        // 使用JSON序列化确保对象比较正确
-        const uniqueThemes = Array.from(
-          new Set([...prevResults.themes, ...result.themes].map(JSON.stringify))
-        ).map(JSON.parse);
-
         // 合并新旧分析结果
         const totalResults = [...prevResults.individualResults, ...newResults];
         
@@ -145,21 +136,17 @@ const ArticleList = () => {
         const sentimentCounts = totalResults.reduce((acc, curr) => {
           acc[curr.sentiment] = (acc[curr.sentiment] || 0) + 1;
           return acc;
-        }, {});
+        }, {
+          hasty: 0,
+          emotional: 0,
+          functional: 0
+        });
 
         // 返回更新后的完整结果
         return {
           totalArticles: totalResults.length,
-          sentimentDistribution: {
-            positive: sentimentCounts.positive || 0,
-            negative: sentimentCounts.negative || 0,
-            neutral: sentimentCounts.neutral || 0
-          },
-          averageSentiment: (
-            totalResults.reduce((sum, curr) => sum + parseFloat(curr.score), 0) /
-            totalResults.length
-          ).toFixed(2),
-          themes: uniqueThemes,
+          sentimentDistribution: sentimentCounts,
+          resultsAttributes: result.resultsAttributes,
           individualResults: totalResults
         };
       });

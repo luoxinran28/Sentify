@@ -6,37 +6,49 @@ import {
   Box,
   Chip,
   Divider,
-  Tooltip
+  Tooltip,
+  Paper
 } from '@mui/material';
 import {
-  TrendingUp as PositiveIcon,
-  TrendingFlat as NeutralIcon,
-  TrendingDown as NegativeIcon,
+  Psychology as EmotionalIcon,
+  Build as FunctionalIcon,
+  Speed as HastyIcon,
   Translate as TranslateIcon
 } from '@mui/icons-material';
-
 
 // 抽取通用的高亮文本处理逻辑
 const createHighlightedText = (text, highlights, options = {}) => {
   const {
     showTranslation = false,
-    getTranslatedWord = null,
+    translatedHighlights = null,
     indented = false
   } = options;
 
   // 确保highlights对象及其属性存在
   const safeHighlights = {
-    positive: (highlights?.positive || []),
-    negative: (highlights?.negative || [])
+    hasty: (highlights?.hasty || []),
+    emotional: (highlights?.emotional || []),
+    functional: (highlights?.functional || [])
   };
 
-  if (!highlights || (!safeHighlights.positive.length && !safeHighlights.negative.length)) {
+  if (!highlights || (!safeHighlights.hasty.length && !safeHighlights.emotional.length && !safeHighlights.functional.length)) {
     return <Typography sx={indented ? { pl: 3 } : undefined}>{text}</Typography>;
   }
 
+  // 创建翻译查找表
+  const translationMap = {};
+  if (showTranslation && translatedHighlights) {
+    Object.entries(translatedHighlights).forEach(([type, words]) => {
+      words.forEach((word, index) => {
+        translationMap[safeHighlights[type][index]] = word;
+      });
+    });
+  }
+
   const allHighlights = [
-    ...safeHighlights.positive.map(word => ({ word, type: 'positive' })),
-    ...safeHighlights.negative.map(word => ({ word, type: 'negative' }))
+    ...safeHighlights.hasty.map(word => ({ word, type: 'hasty' })),
+    ...safeHighlights.emotional.map(word => ({ word, type: 'emotional' })),
+    ...safeHighlights.functional.map(word => ({ word, type: 'functional' }))
   ].sort((a, b) => {
     const indexA = text.toLowerCase().indexOf(a.word.toLowerCase());
     const indexB = text.toLowerCase().indexOf(b.word.toLowerCase());
@@ -46,10 +58,11 @@ const createHighlightedText = (text, highlights, options = {}) => {
   let lastIndex = 0;
   const parts = [];
 
-  allHighlights.forEach((highlight, index) => {
-    const wordIndex = text.toLowerCase().indexOf(highlight.word.toLowerCase());
+  allHighlights.forEach(({ word, type }, index) => {
+    const wordIndex = text.toLowerCase().indexOf(word.toLowerCase(), lastIndex);
     if (wordIndex === -1) return;
 
+    // 添加未高亮的文本
     if (wordIndex > lastIndex) {
       parts.push(
         <span key={`text-${index}`}>
@@ -58,36 +71,27 @@ const createHighlightedText = (text, highlights, options = {}) => {
       );
     }
 
-    const translatedWord = showTranslation && getTranslatedWord ? 
-      getTranslatedWord(highlight) : null;
-
-    const tooltipTitle = translatedWord
-      ? `${highlight.type === 'positive' ? '积极表达' : '消极表达'}: ${translatedWord}`
-      : highlight.type === 'positive' ? '积极表达' : '消极表达';
+    // 添加高亮文本
+    const highlightedWord = text.substring(wordIndex, wordIndex + word.length);
+    const highlightColor = type === 'emotional' ? '#e3f2fd' : type === 'functional' ? '#f3e5f5' : '#fff3e0';
+    const typeText = type === 'emotional' ? '感性' : type === 'functional' ? '实用' : '敷衍';
+    const translation = translationMap[word];
+    const tooltipContent = showTranslation && translation ? 
+      `${typeText}表达: ${translation}` : 
+      `${typeText}表达`;
 
     parts.push(
-      <Tooltip
-        key={`highlight-${index}`}
-        title={tooltipTitle}
-        arrow
-      >
-        <Box
-          component="span"
-          sx={{
-            backgroundColor: highlight.type === 'positive' ? 'success.light' : 'error.light',
-            px: 0.5,
-            borderRadius: 0.5,
-            color: 'white',
-            cursor: 'help'
-          }}
-        >
-          {text.substr(wordIndex, highlight.word.length)}
-        </Box>
+      <Tooltip key={`highlight-${index}`} title={tooltipContent} arrow>
+        <span style={{ backgroundColor: highlightColor }}>
+          {highlightedWord}
+        </span>
       </Tooltip>
     );
-    lastIndex = wordIndex + highlight.word.length;
+
+    lastIndex = wordIndex + word.length;
   });
 
+  // 添加剩余的未高亮文本
   if (lastIndex < text.length) {
     parts.push(
       <span key="text-end">
@@ -96,41 +100,51 @@ const createHighlightedText = (text, highlights, options = {}) => {
     );
   }
 
-  return <Typography sx={indented ? { pl: 3 } : undefined}>{parts}</Typography>;
+  return (
+    <Typography sx={indented ? { pl: 3 } : undefined}>
+      {parts}
+    </Typography>
+  );
 };
-
-const HighlightedText = ({ text, highlights, translatedHighlights }) => (
-  createHighlightedText(text, highlights)
-);
-
-const TranslatedHighlightedText = ({ text, highlights }) => (
-  createHighlightedText(text, highlights, { indented: true })
-);
 
 const AnalysisCard = ({ result, article, index }) => {
   const {
     sentiment,
-    score,
+    translatedSentiment,
+    confidence,
+    confidenceDistribution,
     translation,
     highlights,
-    translatedHighlights
+    translatedHighlights,
+    reasoning,
+    brief
   } = result;
 
   const getSentimentIcon = () => {
     switch (sentiment) {
-      case 'positive':
-        return <PositiveIcon color="success" />;
-      case 'negative':
-        return <NegativeIcon color="error" />;
+      case 'emotional':
+        return <EmotionalIcon color="primary" />;
+      case 'functional':
+        return <FunctionalIcon color="secondary" />;
       default:
-        return <NeutralIcon color="action" />;
+        return <HastyIcon color="warning" />;
     }
   };
 
   const getSentimentColor = () => {
-    if (score >= 0.6) return 'success.main';
-    if (score <= 0.4) return 'error.main';
-    return 'text.primary';
+    switch (sentiment) {
+      case 'emotional':
+        return 'primary.main';
+      case 'functional':
+        return 'secondary.main';
+      default:
+        return 'warning.main';
+    }
+  };
+
+  // 获取最高置信度的类型
+  const getHighestConfidenceType = (distribution) => {
+    return Object.entries(distribution).reduce((a, b) => a[1] > b[1] ? a : b)[0];
   };
 
   return (
@@ -142,7 +156,10 @@ const AnalysisCard = ({ result, article, index }) => {
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               原文 {index}
             </Typography>
-            {createHighlightedText(article, highlights)}
+            {createHighlightedText(article, highlights, { 
+              showTranslation: true,
+              translatedHighlights: translatedHighlights
+            })}
           </Box>
 
           <Divider />
@@ -158,19 +175,62 @@ const AnalysisCard = ({ result, article, index }) => {
               <TranslateIcon fontSize="small" />
               翻译
             </Typography>
-            {createHighlightedText(translation, translatedHighlights, { indented: true })}
+            {createHighlightedText(translation, translatedHighlights)}
           </Box>
 
           <Divider />
 
           {/* 情感分析 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Chip
-              icon={getSentimentIcon()}
-              label={`情感得分: ${(score * 100).toFixed()}%`}
-              color={score >= 0.6 ? 'success' : score <= 0.4 ? 'error' : 'default'}
-              variant="outlined"
-            />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Chip
+                icon={getSentimentIcon()}
+                label={`${translatedSentiment} (${(confidence * 100).toFixed()}%)`}
+                color={sentiment === 'emotional' ? 'primary' : sentiment === 'functional' ? 'secondary' : 'warning'}
+                variant="outlined"
+              />
+            </Box>
+            
+            {/* 置信度分布 */}
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                置信度分布
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {Object.entries(confidenceDistribution).map(([type, value]) => {
+                  const isHighest = type === getHighestConfidenceType(confidenceDistribution);
+                  return (
+                    <Chip
+                      key={type}
+                      label={`${type === 'emotional' ? '感性' : type === 'functional' ? '实用' : '敷衍'}: ${(value * 100).toFixed()}%`}
+                      color={type === 'emotional' ? 'primary' : type === 'functional' ? 'secondary' : 'warning'}
+                      variant={isHighest ? "filled" : "outlined"}
+                      size="small"
+                    />
+                  );
+                })}
+              </Box>
+            </Paper>
+
+            {/* 推理过程 */}
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                推理过程
+              </Typography>
+              <Typography variant="body2">
+                {reasoning}
+              </Typography>
+            </Paper>
+
+            {/* 简短总结 */}
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                简短总结
+              </Typography>
+              <Typography variant="body2">
+                {brief}
+              </Typography>
+            </Paper>
           </Box>
         </Box>
       </CardContent>

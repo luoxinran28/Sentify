@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateUser } = require('../middleware/auth');
-const articleController = require('../controllers/articleController');
+const articleController = require('../controllers/articleControllerV2');
 
 // 应用认证中间件
 router.use(authenticateUser);

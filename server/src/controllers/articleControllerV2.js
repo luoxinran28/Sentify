@@ -1,4 +1,3 @@
-// const analysisService = require('../services/analysis/analysisService');
 const analysisService = require('../services/analysis/analysisServiceV2');
 const articleService = require('../services/article/articleService');
 const databaseService = require('../services/database/databaseService');
@@ -27,11 +26,7 @@ exports.analyzeArticles = async (req, res) => {
     const results = {
       totalArticles: validArticles.length,
       sentimentDistribution: analysisResult.overallSentiment,
-      averageSentiment: (
-        analysisResult.analyses.reduce((sum, curr) => sum + curr.score, 0) / 
-        validArticles.length
-      ).toFixed(2),
-      themes: analysisResult.themes,
+      resultsAttributes: analysisResult.resultsAttributes,
       individualResults: analysisResult.analyses
     };
 
@@ -102,6 +97,32 @@ exports.getScenarioArticles = async (req, res) => {
       parseInt(limit),
       userId
     );
+
+    // 如果有分析结果，确保返回新的数据结构
+    if (data.results) {
+      data.results = {
+        totalArticles: data.results.totalArticles,
+        sentimentDistribution: data.results.sentimentDistribution,
+        resultsAttributes: {
+          sentimentTranslation: {
+            hasty: "敷衍",
+            emotional: "感性",
+            functional: "实用"
+          }
+        },
+        individualResults: data.results.individualResults.map(result => ({
+          sentiment: result.sentiment,
+          translatedSentiment: result.translatedSentiment,
+          confidence: result.confidence,
+          confidenceDistribution: result.confidenceDistribution,
+          translation: result.translation,
+          highlights: result.highlights,
+          translatedHighlights: result.translatedHighlights,
+          reasoning: result.reasoning,
+          brief: result.brief
+        }))
+      };
+    }
     
     res.json(data);
   } catch (error) {

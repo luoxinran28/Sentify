@@ -60,38 +60,78 @@ class DeepseekService {
   }
 
   _validateAndFormatResponse(result) {
-    if (!result || !Array.isArray(result.analyses)) {
+    if (!result || !result.individualResults || !Array.isArray(result.individualResults)) {
       throw new Error('API 返回数据格式错误');
     }
 
     // 格式化每个分析结果
-    result.analyses = result.analyses.map(analysis => ({
-      sentiment: analysis.sentiment || 'neutral',
-      score: analysis.score || 0.5,
-      translation: analysis.translation || '',
-      highlights: {
-        positive: Array.isArray(analysis.highlights?.positive) ? analysis.highlights.positive : [],
-        negative: Array.isArray(analysis.highlights?.negative) ? analysis.highlights.negative : []
-      },
-      translatedHighlights: {
-        positive: Array.isArray(analysis.translatedHighlights?.positive) ? analysis.translatedHighlights.positive : [],
-        negative: Array.isArray(analysis.translatedHighlights?.negative) ? analysis.translatedHighlights.negative : []
-      },
-      keywords: Array.isArray(analysis.keywords) ? analysis.keywords : [],
-      summary: analysis.summary || '暂无文章总结'
-    }));
+    const analyses = result.individualResults.map(analysis => {
+      // 验证必要字段
+      if (!analysis.sentiment || !analysis.confidence || !analysis.translation) {
+        throw new Error('API 返回的分析结果缺少必要字段');
+      }
 
-    // 确保主题分析存在
-    result.themes = Array.isArray(result.themes) ? result.themes : [];
+      return {
+        sentiment: analysis.sentiment || 'hasty',
+        translatedSentiment: analysis.translatedSentiment || '敷衍',
+        score: this._getHighestConfidence(analysis.confidence),
+        translation: analysis.translation || '',
+        highlights: {
+          hasty: Array.isArray(analysis.highlights?.hasty) ? analysis.highlights.hasty : [],
+          emotional: Array.isArray(analysis.highlights?.emotional) ? analysis.highlights.emotional : [],
+          functional: Array.isArray(analysis.highlights?.functional) ? analysis.highlights.functional : []
+        },
+        translatedHighlights: {
+          hasty: Array.isArray(analysis.translatedHighlights?.hasty) ? analysis.translatedHighlights.hasty : [],
+          emotional: Array.isArray(analysis.translatedHighlights?.emotional) ? analysis.translatedHighlights.emotional : [],
+          functional: Array.isArray(analysis.translatedHighlights?.functional) ? analysis.translatedHighlights.functional : []
+        },
+        confidence: analysis.confidence || {
+          hasty: 0,
+          emotional: 0,
+          functional: 0
+        },
+        reasoning: analysis.reasoning || '暂无推理过程',
+        brief: analysis.brief || '暂无总结'
+      };
+    });
 
-    // 确保情感分布存在
-    result.overallSentiment = result.overallSentiment || {
-      positive: 0,
-      negative: 0,
-      neutral: 0
+    // 计算整体情感分布
+    const overallSentiment = this._calculateOverallSentiment(analyses);
+
+    return {
+      analyses,
+      overallSentiment,
+      resultsAttributes: result.resultsAttributes || {
+        sentimentTranslation: {
+          hasty: "敷衍",
+          emotional: "感性",
+          functional: "实用"
+        }
+      }
+    };
+  }
+
+  _getHighestConfidence(confidence) {
+    if (!confidence) return 0.5;
+    const values = Object.values(confidence).map(Number);
+    return Math.max(...values);
+  }
+
+  _calculateOverallSentiment(analyses) {
+    const distribution = {
+      hasty: 0,
+      emotional: 0,
+      functional: 0
     };
 
-    return result;
+    analyses.forEach(analysis => {
+      if (analysis.sentiment) {
+        distribution[analysis.sentiment]++;
+      }
+    });
+
+    return distribution;
   }
 }
 
