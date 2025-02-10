@@ -7,7 +7,8 @@ import {
   Menu,
   MenuItem,
   Box,
-  Divider
+  Divider,
+  alpha
 } from '@mui/material';
 import { 
   DensityMedium, 
@@ -58,18 +59,43 @@ function SceneHeader({ menuItems = [], isEditing, onToggleEdit }) {
   ];
 
   return (
-    <AppBar position="static" elevation={1} 
+    <AppBar 
+      position="static" 
+      elevation={1} 
       sx={{ 
-        backgroundColor: '#051923'
-        }}
-      >
+        backgroundColor: '#020202',
+        backgroundImage: `radial-gradient(${alpha('#fff', 0.1)} 1px, ${alpha('#051923', 0.95)} 1px)`,
+        backgroundSize: '4px 4px',
+        backdropFilter: 'blur(3px)',
+        WebkitMaskImage: 'linear-gradient(to bottom, #ababab 18%, transparent)',
+        maskImage: 'linear-gradient(to bottom, #ababab 18%, transparent)',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'inherit',
+          backdropFilter: 'blur(3px)',
+          zIndex: -1
+        }
+      }}
+    >
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1,
-          color: '#fefefe'
-         }}>
+        <Typography 
+          variant="h6" 
+          component="div" 
+          sx={{ 
+            flexGrow: 1,
+            color: '#fefefe',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
           Sentify
         </Typography>
-        <Box>
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
           <IconButton
             size="large"
             onClick={handleMenu}
