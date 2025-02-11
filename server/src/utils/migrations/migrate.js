@@ -42,50 +42,120 @@ const createTables = `
     FOREIGN KEY (scenario_id) REFERENCES scenarios(id)
   );
 
+  -- 创建情感类型表
+  CREATE TABLE IF NOT EXISTS sentiments (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name_en VARCHAR(100) NOT NULL,
+    name_zh VARCHAR(100) NOT NULL,
+    description TEXT,
+    category VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- 创建分析结果表
   CREATE TABLE IF NOT EXISTS analysis_results (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
     scenario_id INTEGER NOT NULL,
-    sentiment VARCHAR(50),
-    score DECIMAL,
+    sentiment_id INTEGER,
+    confidence DECIMAL,
+    confidence_distribution JSONB,
     translation TEXT,
     highlights JSONB,
     translated_highlights JSONB,
-    keywords JSONB,
+    reasoning TEXT,
+    brief TEXT,
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (article_id) REFERENCES articles(id),
-    FOREIGN KEY (scenario_id) REFERENCES scenarios(id)
+    FOREIGN KEY (scenario_id) REFERENCES scenarios(id),
+    FOREIGN KEY (sentiment_id) REFERENCES sentiments(id)
   );
 `;
 
 const updateTables = `
-  -- 添加 is_active 列（如果不存在）
+  -- 创建备份表
+  CREATE TABLE IF NOT EXISTS analysis_results_backup AS 
+  SELECT * FROM analysis_results;
+
+  -- 插入基础情感类型数据
+  INSERT INTO sentiments (code, name_en, name_zh, description) 
+  VALUES 
+    ('hasty', 'Hasty', '敷衍', '回复简短，缺乏深度思考'),
+    ('emotional', 'Emotional', '感性', '带有强烈的主观情感色彩'),
+    ('functional', 'Functional', '实用', '注重功能性描述和客观分析')
+  ON CONFLICT (code) DO NOTHING;
+
+  -- 确保新列存在
   DO $$ 
   BEGIN 
-    IF NOT EXISTS (
-      SELECT 1 
-      FROM information_schema.columns 
-      WHERE table_name='users' AND column_name='is_active'
-    ) THEN 
-      ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true;
-    END IF;
+    BEGIN
+      -- 先重命名 score 列为 confidence
+      ALTER TABLE analysis_results 
+        RENAME COLUMN score TO confidence;
+    EXCEPTION 
+      WHEN undefined_column THEN 
+        NULL;
+    END;
+
+    BEGIN
+      -- 添加其他新列
+      ALTER TABLE analysis_results 
+        ADD COLUMN IF NOT EXISTS sentiment_id INTEGER,
+        ADD COLUMN IF NOT EXISTS confidence_distribution JSONB,
+        ADD COLUMN IF NOT EXISTS reasoning TEXT,
+        ADD COLUMN IF NOT EXISTS brief TEXT;
+    EXCEPTION 
+      WHEN duplicate_column THEN 
+        NULL;
+    END;
+
+    -- 在删除旧列之前，先更新 sentiment_id
+    BEGIN
+      UPDATE analysis_results ar
+      SET sentiment_id = (
+        SELECT id FROM sentiments s 
+        WHERE s.code = ar.sentiment
+      )
+      WHERE ar.sentiment IS NOT NULL;
+    EXCEPTION 
+      WHEN undefined_column THEN 
+        NULL;
+    END;
+
+    BEGIN
+      -- 最后删除不再使用的列
+      ALTER TABLE analysis_results
+        DROP COLUMN IF EXISTS keywords,
+        DROP COLUMN IF EXISTS sentiment;
+    EXCEPTION 
+      WHEN undefined_column THEN 
+        NULL;
+    END;
   END $$;
+
+  -- 添加外键约束
+  ALTER TABLE analysis_results 
+    DROP CONSTRAINT IF EXISTS fk_sentiment,
+    ADD CONSTRAINT fk_sentiment 
+    FOREIGN KEY (sentiment_id) 
+    REFERENCES sentiments(id);
 
   -- 确保外键约束正确设置
   ALTER TABLE analysis_results 
-  DROP CONSTRAINT IF EXISTS analysis_results_article_id_fkey,
-  ADD CONSTRAINT analysis_results_article_id_fkey 
-  FOREIGN KEY (article_id) 
-  REFERENCES articles(id) 
-  ON DELETE CASCADE;
+    DROP CONSTRAINT IF EXISTS analysis_results_article_id_fkey,
+    ADD CONSTRAINT analysis_results_article_id_fkey 
+    FOREIGN KEY (article_id) 
+    REFERENCES articles(id) 
+    ON DELETE CASCADE;
 `;
 
 const dropTables = `
   DROP TABLE IF EXISTS analysis_results;
   DROP TABLE IF EXISTS articles;
   DROP TABLE IF EXISTS scenarios;
+  DROP TABLE IF EXISTS sentiments;
   DROP TABLE IF EXISTS users;
 `;
 

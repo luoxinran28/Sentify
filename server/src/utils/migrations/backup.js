@@ -14,21 +14,41 @@ async function backupData() {
     
     // 备份用户数据
     const users = await client.query('SELECT * FROM users');
-    
-    // 备份场景数据
     const scenarios = await client.query('SELECT * FROM scenarios');
-    
-    // 备份文章数据
     const articles = await client.query('SELECT * FROM articles');
     
-    // 备份分析结果数据
-    const analysisResults = await client.query('SELECT * FROM analysis_results');
+    // 检查 sentiments 表是否存在
+    const checkSentimentsTable = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'sentiments'
+      );
+    `);
+    
+    // 根据表是否存在决定查询方式
+    let sentiments = { rows: [] };
+    let analysisResults;
+    
+    if (checkSentimentsTable.rows[0].exists) {
+      sentiments = await client.query('SELECT * FROM sentiments');
+      analysisResults = await client.query(`
+        SELECT 
+          ar.*,
+          s.code as sentiment_code 
+        FROM analysis_results ar 
+        LEFT JOIN sentiments s ON ar.sentiment_id = s.id
+      `);
+    } else {
+      // 如果是旧结构，直接查询 analysis_results
+      analysisResults = await client.query('SELECT * FROM analysis_results');
+    }
 
     const backup = {
       timestamp: new Date().toISOString(),
       users: users.rows,
       scenarios: scenarios.rows,
       articles: articles.rows,
+      sentiments: sentiments.rows,
       analysisResults: analysisResults.rows
     };
 
