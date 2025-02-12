@@ -24,7 +24,7 @@ export const addAccessCodeHeader = (headers = {}) => {
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  timeout: 60000,
+  timeout: 180000,
   headers: {
     'Content-Type': 'application/json'
   }

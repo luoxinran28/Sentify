@@ -11,7 +11,7 @@ const IGNORED_ERRORS = [
 const errorCounter = {
   count: 0,
   lastReset: Date.now(),
-  resetInterval: 60000, // 1分钟重置一次
+  resetInterval: 180000, // 3分钟重置一次
 };
 
 // 重置错误计数器

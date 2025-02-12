@@ -153,8 +153,6 @@ const ArticleList = () => {
     } catch (error) {
       console.error('自动分析错误:', error);
       console.error('错误详情:', {
-        validArticles: validArticles?.length,
-        newArticles: newArticles?.length,
         error: error.message
       });
     }
@@ -542,7 +540,7 @@ const ArticleList = () => {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={1000}
         onClose={handleSnackbarClose}
       >
         <Alert 

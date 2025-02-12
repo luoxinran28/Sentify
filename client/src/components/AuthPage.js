@@ -160,7 +160,7 @@ function AuthPage({ onAuthSuccess }) {
 
         <Snackbar
           open={!!error}
-          autoHideDuration={3000}
+          autoHideDuration={1000}
           onClose={() => setError('')}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >

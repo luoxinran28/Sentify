@@ -10,9 +10,14 @@ class DatabaseService {
     const hash = this.generateHash(content);
     try {
       const result = await query(
-        `SELECT ar.* 
+        `SELECT 
+          ar.*,
+          s.code as sentiment_code,
+          s.name_en as sentiment_name_en,
+          s.name_zh as sentiment_name_zh
          FROM analysis_results ar
          JOIN articles a ON ar.article_id = a.id
+         LEFT JOIN sentiments s ON ar.sentiment_id = s.id
          WHERE a.content_hash = $1 
          AND (ar.expires_at IS NULL OR ar.expires_at > NOW())`,
         [hash]
@@ -44,23 +49,35 @@ class DatabaseService {
         articleId = newArticle.rows[0].id;
       }
 
+      // 获取情感ID
+      const sentimentResult = await query(
+        'SELECT id FROM sentiments WHERE code = $1',
+        [result.sentiment]
+      );
+
+      if (sentimentResult.rows.length === 0) {
+        throw new Error(`未找到情感类型: ${result.sentiment}`);
+      }
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
       await query(
         `INSERT INTO analysis_results 
-         (article_id, scenario_id, sentiment, score, translation, highlights, 
-          translated_highlights, keywords, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         (article_id, scenario_id, sentiment_id, confidence, confidence_distribution,
+          translation, highlights, translated_highlights, reasoning, brief, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           articleId,
           scenarioId,
-          result.sentiment,
-          result.score,
+          sentimentResult.rows[0].id,
+          result.confidence,
+          result.confidenceDistribution,
           result.translation,
           result.highlights,
           result.translatedHighlights,
-          result.keywords,
+          result.reasoning,
+          result.brief,
           expiresAt
         ]
       );
