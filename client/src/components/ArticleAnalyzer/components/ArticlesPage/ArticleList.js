@@ -44,13 +44,14 @@ const ArticleList = () => {
   const loadScenarioArticles = useCallback(async (pageNum, limit) => {
     try {
       setLoading(true);
-      const data = await articleService.getScenarioArticles(scenarioId, pageNum, limit);
+      const data = await articleService.getArticlesWithAnalysis(scenarioId, pageNum, limit);
       
       if (data.articles && data.articles.length > 0) {
         const newArticles = data.articles.map(article => ({ 
           text: article.content,
           id: article.id,
-          analyzed: false
+          createdAt: article.createdAt,
+          analyzed: !!data.results
         }));
 
         if (pageNum === 1) {
@@ -61,102 +62,78 @@ const ArticleList = () => {
         
         setHasMore(data.pagination.currentPage < data.pagination.totalPages);
         
-        analyzeNewArticles(newArticles);
+        if (data.results) {
+          setResults(data.results);
+        }
       } else {
         setHasMore(false);
       }
     } catch (error) {
       console.error('加载场景文章错误:', error);
       setError(error.message);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
   }, [scenarioId]);
 
-  /**
-   * 分析新载入的文章并更新状态
-   * @param {Array} newArticles - 新载入的文章数组，每个元素包含 {id, text, analyzed} 
-   */
-  const analyzeNewArticles = async (newArticles) => {
-    try {
-      // 筛选出未分析的有效文章（非空且未分析）
-      const validArticles = newArticles
-        .filter(a => !a.analyzed && a.text?.trim())
-        .map(a => ({
-          id: a.id,
-          text: a.text
-        }));
-
-      if (validArticles.length === 0) return;
-
-      // 调用API进行文章分析，只传递文本内容
-      const result = await articleService.analyzeArticles(validArticles.map(a => a.text), scene.id);
-      
-      // 将分析结果与原文章ID关联
-      const analysisResults = result.individualResults.map((analysis, index) => ({
-        ...analysis,
-        articleId: validArticles[index].id
-      }));
-
-      // 更新文章状态，标记已分析的文章
-      setArticles(prevArticles => {
-        return prevArticles.map(article => {
-          if (!article.analyzed && article.text?.trim() && 
-              validArticles.some(va => va.id === article.id)) {
-            return { ...article, analyzed: true };
-          }
-          return article;
-        });
-      });
-
-      // 更新分析结果
-      setResults(prevResults => {
-        // 如果是首次分析，直接使用新结果
-        if (!prevResults) {
-          return {
-            ...result,
-            individualResults: analysisResults
-          };
-        }
-        
-        // 使用Set进行文章ID去重
-        const existingIds = new Set(
-          prevResults.individualResults
-            .map(r => r.articleId)
-            .filter(id => id != null)
-        );
-
-        // 过滤出未分析过的结果
-        const newResults = analysisResults.filter(r => !existingIds.has(r.articleId));
-
-        // 合并新旧分析结果
-        const totalResults = [...prevResults.individualResults, ...newResults];
-        
-        // 重新计算情感分布
-        const sentimentCounts = totalResults.reduce((acc, curr) => {
-          acc[curr.sentiment] = (acc[curr.sentiment] || 0) + 1;
-          return acc;
-        }, {
-          hasty: 0,
-          emotional: 0,
-          functional: 0
-        });
-
-        // 返回更新后的完整结果
-        return {
-          totalArticles: totalResults.length,
-          sentimentDistribution: sentimentCounts,
-          resultsAttributes: result.resultsAttributes,
-          individualResults: totalResults
-        };
-      });
-    } catch (error) {
-      console.error('自动分析错误:', error);
-      console.error('错误详情:', {
-        error: error.message
+  // 加载更多文章
+  const loadMoreArticles = useCallback(() => {
+    if (!loading && hasMore) {
+      setPage(prevPage => {
+        loadScenarioArticles(prevPage + 1, 20);
+        return prevPage + 1;
       });
     }
-  };
+  }, [loading, hasMore, loadScenarioArticles]);
+
+  // 分析新文章
+  const analyzeNewArticles = useCallback(async (newArticles) => {
+    if (!newArticles || newArticles.length === 0) return;
+
+    try {
+      const analysisResult = await articleService.analyzeArticles(
+        newArticles.map(a => a.text),
+        scenarioId
+      );
+
+      setResults(prevResults => {
+        if (!prevResults) return analysisResult;
+        return {
+          ...prevResults,
+          totalArticles: prevResults.totalArticles + analysisResult.totalArticles,
+          sentimentDistribution: {
+            hasty: (prevResults.sentimentDistribution?.hasty || 0) + (analysisResult.sentimentDistribution?.hasty || 0),
+            emotional: (prevResults.sentimentDistribution?.emotional || 0) + (analysisResult.sentimentDistribution?.emotional || 0),
+            functional: (prevResults.sentimentDistribution?.functional || 0) + (analysisResult.sentimentDistribution?.functional || 0)
+          },
+          individualResults: [
+            ...(prevResults.individualResults || []),
+            ...(analysisResult.individualResults || [])
+          ]
+        };
+      });
+
+      setArticles(prevArticles => 
+        prevArticles.map(article => ({
+          ...article,
+          analyzed: true
+        }))
+      );
+
+    } catch (error) {
+      console.error('分析新文章错误:', error);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: 'error'
+      });
+    }
+  }, [scenarioId]);
 
   // 初始加载
   useEffect(() => {
@@ -207,34 +184,31 @@ const ArticleList = () => {
 
   // 删除文章
   const handleDeleteSelected = async () => {
+    if (selectedArticles.size === 0) return;
+
     try {
-      const selectedIndexes = Array.from(selectedArticles);
-      const selectedArticleIds = selectedIndexes.map(index => articles[index].id).filter(Boolean);
+      const articleIds = Array.from(selectedArticles);
+      await articleService.deleteArticles(scenarioId, articleIds);
       
-      if (selectedArticleIds.length > 0) {
-        await articleService.deleteArticles(scenarioId, selectedArticleIds);
-      }
+      setArticles(prevArticles => 
+        prevArticles.filter(article => !selectedArticles.has(article.id))
+      );
       
-      const newArticles = articles.filter((_, index) => !selectedArticles.has(index));
-      setArticles(newArticles.length > 0 ? newArticles : []);
-      
-      if (selectedIndexes.some(index => articles[index].analyzed)) {
-        setResults(null);
-      }
-      
-      setIsSelecting(false);
       setSelectedArticles(new Set());
-      
       setSnackbar({
         open: true,
-        message: `成功删除 ${selectedIndexes.length} 篇文章`,
+        message: `已删除 ${articleIds.length} 篇文章`,
         severity: 'success'
       });
+      
+      // 重新加载第一页
+      setPage(1);
+      loadScenarioArticles(1, 20);
     } catch (error) {
-      console.error('删除文章失败:', error);
+      console.error('删除文章错误:', error);
       setSnackbar({
         open: true,
-        message: '删除文章失败',
+        message: error.message,
         severity: 'error'
       });
     }
@@ -327,17 +301,6 @@ const ArticleList = () => {
     setCurrentTab(newValue);
   };
 
-  // 加载更多
-  const handleLoadMore = () => {
-    setPage(prev => prev + 1);
-  };
-
-  useEffect(() => {
-    if (page > 1) {
-      loadScenarioArticles(page);
-    }
-  }, [page]);
-
   // 选择相关
   const handleToggleSelect = () => {
     setIsSelecting(!isSelecting);
@@ -380,7 +343,7 @@ const ArticleList = () => {
         return;
       }
 
-      const result = await articleService.analyzeArticles(validArticles, scene.id);
+      const result = await articleService.analyzeArticles(validArticles, scenarioId);
       setResults(result);
     } catch (error) {
       console.error('分析错误:', error);
@@ -397,21 +360,21 @@ const ArticleList = () => {
   // 清空文章
   const handleClearArticles = async () => {
     try {
-      await articleService.clearArticles(scene.id);
-      
-      setArticles([{ text: '' }]);
+      await articleService.clearArticles(scenarioId);
+      setArticles([]);
       setResults(null);
-      
+      setPage(1);
+      setHasMore(false);
       setSnackbar({
         open: true,
-        message: '内容已清空',
+        message: '已清空所有文章',
         severity: 'success'
       });
     } catch (error) {
-      console.error('清空内容错误:', error);
+      console.error('清空文章错误:', error);
       setSnackbar({
         open: true,
-        message: error.message || '清空内容失败',
+        message: error.message,
         severity: 'error'
       });
     }
@@ -449,7 +412,7 @@ const ArticleList = () => {
           <InfiniteScroll
             loading={loading}
             hasMore={hasMore && articles.length > 0}
-            onLoadMore={handleLoadMore}
+            onLoadMore={loadMoreArticles}
             loadingSpinner={<LoadingSpinner />}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

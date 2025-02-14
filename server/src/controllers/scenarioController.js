@@ -13,6 +13,29 @@ exports.getScenarios = async (req, res) => {
   }
 };
 
+exports.getScenarioById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const scenario = await scenarioService.getScenarioById(id, userId);
+    
+    if (!scenario) {
+      return res.status(404).json({
+        success: false,
+        message: '场景不存在或无权访问'
+      });
+    }
+    
+    res.json(scenario);
+  } catch (error) {
+    console.error('获取场景详情失败:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 exports.createScenario = async (req, res) => {
   try {
     const scenario = await scenarioService.createScenario(req.user.id, req.body);
