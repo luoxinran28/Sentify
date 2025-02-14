@@ -28,40 +28,29 @@ export const articleService = {
     }
   },
 
-  // 获取场景文章
-  getScenarioArticles: async (scenarioId, page = 1, limit = 20) => {
+  // 获取场景文章列表（基本信息）
+  listArticles: async (scenarioId, page = 1, limit = 20) => {
+    try {
+      const response = await axios.get(
+        `/scenarios/${scenarioId}/articles?page=${page}&limit=${limit}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('获取文章列表失败:', error);
+      throw new Error(error.response?.data?.message || '获取文章列表失败');
+    }
+  },
+
+  // 获取文章及其分析结果
+  getArticlesWithAnalysis: async (scenarioId, page = 1, limit = 20) => {
     try {
       const response = await axios.get(
         `/articles/${scenarioId}?page=${page}&limit=${limit}`
       );
-      
-      // 处理分析结果数据
-      if (response.data.results) {
-        return {
-          articles: response.data.articles,
-          results: {
-            totalArticles: response.data.results.totalArticles,
-            sentimentDistribution: response.data.results.sentimentDistribution,
-            resultsAttributes: response.data.results.resultsAttributes,
-            individualResults: response.data.results.individualResults.map(result => ({
-              sentiment: result.sentiment,
-              translatedSentiment: result.translatedSentiment,
-              confidence: result.confidence,
-              confidenceDistribution: result.confidenceDistribution,
-              translation: result.translation,
-              highlights: result.highlights,
-              translatedHighlights: result.translatedHighlights,
-              reasoning: result.reasoning,
-              brief: result.brief
-            }))
-          }
-        };
-      }
-      
       return response.data;
     } catch (error) {
-      console.error('获取场景文章失败:', error);
-      throw new Error(error.response?.data?.message || '获取场景文章失败');
+      console.error('获取文章分析结果失败:', error);
+      throw new Error(error.response?.data?.message || '获取文章分析结果失败');
     }
   },
 
@@ -76,7 +65,7 @@ export const articleService = {
     }
   },
 
-  // 删除文章
+  // 删除选中的文章
   deleteArticles: async (scenarioId, articleIds) => {
     try {
       const response = await axios.delete(`/articles/${scenarioId}`, {

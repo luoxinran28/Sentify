@@ -214,14 +214,25 @@ class AnalysisService {
   }
 
   // 获取场景的所有文章及其分析结果
-  async getScenarioArticles(scenarioId, userId) {
+  async getArticlesWithAnalysisResults(scenarioId, userId, page = 1, limit = 20) {
     try {
       await this._validateUserAccess(scenarioId, userId);
 
+      const offset = (page - 1) * limit;
+
+      // 获取总数
+      const countResult = await query(
+        `SELECT COUNT(*) as total FROM articles WHERE scenario_id = $1`,
+        [scenarioId]
+      );
+      const total = parseInt(countResult.rows[0].total);
+
+      // 获取分页数据
       const result = await query(
         `SELECT 
           a.id as article_id,
           a.content,
+          a.created_at as "createdAt",
           ar.confidence,
           ar.confidence_distribution,
           ar.translation,
@@ -235,21 +246,31 @@ class AnalysisService {
          LEFT JOIN analysis_results ar ON a.id = ar.article_id
          LEFT JOIN sentiments s ON ar.sentiment_id = s.id
          WHERE a.scenario_id = $1
-         ORDER BY a.created_at DESC`,
-        [scenarioId]
+         ORDER BY a.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [scenarioId, limit, offset]
       );
 
       if (result.rows.length === 0) {
-        return { articles: [], results: null };
+        return {
+          articles: [],
+          results: null,
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalItems: 0
+          }
+        };
       }
 
       const articles = result.rows.map(row => ({
         id: row.article_id,
-        content: row.content
+        content: row.content,
+        createdAt: row.createdAt
       }));
 
       const analysisResults = {
-        totalArticles: articles.length,
+        totalArticles: total,
         sentimentDistribution: this._calculateOverallSentiment(result.rows),
         individualResults: result.rows.map(row => ({
           sentiment: row.sentiment,
@@ -266,7 +287,12 @@ class AnalysisService {
 
       return {
         articles,
-        results: analysisResults
+        results: analysisResults,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total
+        }
       };
     } catch (error) {
       console.error('获取场景文章错误:', error);

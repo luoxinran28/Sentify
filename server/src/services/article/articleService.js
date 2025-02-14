@@ -1,12 +1,25 @@
 const { query } = require('../database/query');
 
 class ArticleService {
-  async getArticlesByScenario(scenarioId, page, limit) {
+  async listArticlesWithPagination(scenarioId, userId, page, limit) {
     const offset = (page - 1) * limit;
     
     try {
+      // 验证用户权限
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('无权访问该场景或场景不存在');
+      }
+
       const articlesQuery = `
-        SELECT id, content, created_at as "createdAt"
+        SELECT 
+          id, 
+          content, 
+          created_at as "createdAt"
         FROM articles 
         WHERE scenario_id = $1
         ORDER BY created_at DESC

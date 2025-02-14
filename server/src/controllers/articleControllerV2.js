@@ -38,17 +38,17 @@ exports.analyzeArticles = async (req, res) => {
   }
 };
 
-exports.getArticles = async (req, res) => {
+exports.listArticles = async (req, res) => {
   try {
     const { scenarioId } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const userId = req.user.id;
     
-    const result = await articleService.getArticlesByScenario(
+    const result = await articleService.listArticlesWithPagination(
       scenarioId,
+      userId,
       parseInt(page),
-      parseInt(limit),
-      userId
+      parseInt(limit)
     );
     
     res.json(result);
@@ -84,44 +84,18 @@ exports.clearArticles = async (req, res) => {
   }
 };
 
-exports.getScenarioArticles = async (req, res) => {
+exports.getArticlesWithAnalysis = async (req, res) => {
   try {
     const { scenarioId } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const userId = req.user.id;
     
-    const data = await articleService.getArticlesByScenario(
+    const data = await analysisService.getArticlesWithAnalysisResults(
       scenarioId,
+      userId,
       parseInt(page),
-      parseInt(limit),
-      userId
+      parseInt(limit)
     );
-
-    // 如果有分析结果，确保返回新的数据结构
-    if (data.results) {
-      data.results = {
-        totalArticles: data.results.totalArticles,
-        sentimentDistribution: data.results.sentimentDistribution,
-        resultsAttributes: {
-          sentimentTranslation: {
-            hasty: "敷衍",
-            emotional: "感性",
-            functional: "实用"
-          }
-        },
-        individualResults: data.results.individualResults.map(result => ({
-          sentiment: result.sentiment,
-          translatedSentiment: result.translatedSentiment,
-          confidence: result.confidence,
-          confidenceDistribution: result.confidenceDistribution,
-          translation: result.translation,
-          highlights: result.highlights,
-          translatedHighlights: result.translatedHighlights,
-          reasoning: result.reasoning,
-          brief: result.brief
-        }))
-      };
-    }
     
     res.json(data);
   } catch (error) {

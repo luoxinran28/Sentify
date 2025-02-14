@@ -3,11 +3,11 @@ const router = express.Router();
 const { authenticateUser } = require('../middleware/auth');
 const articleController = require('../controllers/articleControllerV2');
 
-// 应用认证中间件
+// 应用认证中间件到所有文章相关路由
 router.use(authenticateUser);
 
 // 文章分析路由
-router.get('/:scenarioId', articleController.getScenarioArticles);
+router.get('/:scenarioId', articleController.getArticlesWithAnalysis);
 router.post('/:scenarioId/analyze', articleController.analyzeArticles);
 router.post('/:scenarioId/clear', articleController.clearArticles);
 router.delete('/:scenarioId', articleController.deleteArticles);

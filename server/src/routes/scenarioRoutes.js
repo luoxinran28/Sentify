@@ -7,13 +7,14 @@ const scenarioController = require('../controllers/scenarioController');
 // 应用认证中间件到所有场景相关路由
 router.use(authenticateUser);
 
-// 场景相关路由
+// 场景管理路由
 router.get('/', scenarioController.getScenarios);
 router.post('/', scenarioController.createScenario);
+router.get('/:id', scenarioController.getScenarioById);
 router.put('/:id', scenarioController.updateScenario);
 router.delete('/:id', scenarioController.deleteScenario);
 
 // 场景文章路由
-router.get('/:scenarioId/articles', articleController.getArticles);
+router.get('/:scenarioId/articles', articleController.listArticles);
 
 module.exports = router; 
