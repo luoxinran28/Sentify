@@ -1,6 +1,5 @@
 const analysisService = require('../services/analysis/analysisServiceV2');
 const articleService = require('../services/article/articleService');
-const databaseService = require('../services/database/databaseService');
 const scenarioService = require('../services/scenarioService');
 
 exports.analyzeArticles = async (req, res) => {
