@@ -66,6 +66,7 @@ const createTables = `
     translated_highlights JSONB,
     reasoning TEXT,
     brief TEXT,
+    reply_suggestion TEXT,
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (article_id) REFERENCES articles(id),
@@ -105,7 +106,8 @@ const updateTables = `
         ADD COLUMN IF NOT EXISTS sentiment_id INTEGER,
         ADD COLUMN IF NOT EXISTS confidence_distribution JSONB,
         ADD COLUMN IF NOT EXISTS reasoning TEXT,
-        ADD COLUMN IF NOT EXISTS brief TEXT;
+        ADD COLUMN IF NOT EXISTS brief TEXT,
+        ADD COLUMN IF NOT EXISTS reply_suggestion TEXT;
     EXCEPTION 
       WHEN duplicate_column THEN 
         NULL;

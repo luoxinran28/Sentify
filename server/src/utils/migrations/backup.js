@@ -34,7 +34,8 @@ async function backupData() {
       analysisResults = await client.query(`
         SELECT 
           ar.*,
-          s.code as sentiment_code 
+          s.code as sentiment_code,
+          ar.reply_suggestion
         FROM analysis_results ar 
         LEFT JOIN sentiments s ON ar.sentiment_id = s.id
       `);

@@ -74,6 +74,7 @@ class AnalysisService {
               ar.translated_highlights as "translatedHighlights",
               ar.reasoning,
               ar.brief,
+              ar.reply_suggestion as "replySuggestion",
               s.code as sentiment,
               s.name_zh as "translatedSentiment"
              FROM analysis_results ar
@@ -161,8 +162,8 @@ class AnalysisService {
         await query(
           `INSERT INTO analysis_results 
            (article_id, scenario_id, sentiment_id, confidence, confidence_distribution,
-            translation, highlights, translated_highlights, reasoning, brief, expires_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            translation, highlights, translated_highlights, reasoning, brief, reply_suggestion, expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
           [
             articleId,
             scenarioId,
@@ -174,6 +175,7 @@ class AnalysisService {
             result.translatedHighlights,
             result.reasoning,
             result.brief,
+            result.replySuggestion,
             expiresAt
           ]
         );
@@ -240,8 +242,10 @@ class AnalysisService {
           ar.translated_highlights,
           ar.reasoning,
           ar.brief,
+          ar.reply_suggestion as "replySuggestion",
           s.code as sentiment,
-          s.name_zh as translated_sentiment
+          s.name_zh as translated_sentiment,
+          ar.confidence_distribution as "confidenceDistribution"
          FROM articles a
          LEFT JOIN analysis_results ar ON a.id = ar.article_id
          LEFT JOIN sentiments s ON ar.sentiment_id = s.id
@@ -281,7 +285,8 @@ class AnalysisService {
           highlights: row.highlights,
           translatedHighlights: row.translated_highlights,
           reasoning: row.reasoning,
-          brief: row.brief
+          brief: row.brief,
+          replySuggestion: row.replySuggestion || '暂无回复建议'
         }))
       };
 

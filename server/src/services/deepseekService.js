@@ -105,7 +105,8 @@ class DeepseekService {
           functional: Array.isArray(analysis.translatedHighlights?.functional) ? analysis.translatedHighlights.functional : []
         },
         reasoning: analysis.reasoning || '暂无推理过程',
-        brief: analysis.brief || '暂无总结'
+        brief: analysis.brief || '暂无总结',
+        replySuggestion: analysis.replySuggestion || '暂无回复建议'
       };
     });
 

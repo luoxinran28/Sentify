@@ -19,7 +19,8 @@ export const articleService = {
           highlights: result.highlights,
           translatedHighlights: result.translatedHighlights,
           reasoning: result.reasoning,
-          brief: result.brief
+          brief: result.brief,
+          replySuggestion: result.replySuggestion
         }))
       };
     } catch (error) {

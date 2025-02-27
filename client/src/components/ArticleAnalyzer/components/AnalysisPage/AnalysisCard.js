@@ -117,7 +117,8 @@ const AnalysisCard = ({ result, article, index }) => {
     highlights,
     translatedHighlights,
     reasoning,
-    brief
+    brief,
+    replySuggestion
   } = result;
 
   const getSentimentIcon = () => {
@@ -229,6 +230,16 @@ const AnalysisCard = ({ result, article, index }) => {
               </Typography>
               <Typography variant="body2">
                 {brief}
+              </Typography>
+            </Paper>
+
+            {/* 回复建议 */}
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                回复建议
+              </Typography>
+              <Typography variant="body2">
+                {replySuggestion}
               </Typography>
             </Paper>
           </Box>
