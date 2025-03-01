@@ -1,12 +1,29 @@
 const deepseekService = require('../deepseekService');
 const crypto = require('crypto');
 const { query } = require('../database/query');
+const scenarioService = require('../scenarioService');
 
 class AnalysisService {
   async analyzeArticles(articles, scenarioId, userId) {
     try {
       // 验证用户权限
       await this._validateUserAccess(scenarioId, userId);
+
+      // 获取场景的情感类型
+      const scenarioSentiments = await scenarioService.getScenarioSentiments(scenarioId, userId);
+      
+      // 构建情感类型映射，用于翻译
+      const sentimentTranslations = {};
+      scenarioSentiments.forEach(s => {
+        sentimentTranslations[s.code] = s.nameZh;
+      });
+      
+      // 如果没有自定义情感类型，使用默认翻译
+      if (Object.keys(sentimentTranslations).length === 0) {
+        sentimentTranslations.hasty = "敷衍";
+        sentimentTranslations.emotional = "感性";
+        sentimentTranslations.functional = "实用";
+      }
 
       // 检查缓存
       const cachedResults = await this._getCachedResults(articles);
@@ -17,11 +34,7 @@ class AnalysisService {
           analyses: cachedResults,
           overallSentiment: this._calculateOverallSentiment(cachedResults),
           resultsAttributes: {
-            sentimentTranslation: {
-              hasty: "敷衍",
-              emotional: "感性",
-              functional: "实用"
-            }
+            sentimentTranslation: sentimentTranslations
           }
         };
       }
@@ -41,7 +54,9 @@ class AnalysisService {
       return {
         analyses: finalResults,
         overallSentiment: this._calculateOverallSentiment(finalResults),
-        resultsAttributes: apiResult.resultsAttributes
+        resultsAttributes: {
+          sentimentTranslation: sentimentTranslations
+        }
       };
     } catch (error) {
       console.error('文章分析错误:', error);
@@ -113,11 +128,6 @@ class AnalysisService {
         const result = results[i];
         const contentHash = this._generateContentHash(content);
 
-        // // 检查文章是否已存在
-        // let articleResult = await query(
-        //   'SELECT id FROM articles WHERE content_hash = $1',
-        //   [contentHash]
-        // );
         const articleResult = await query(
           `INSERT INTO articles (scenario_id, content, content_hash) 
            VALUES ($1, $2, $3) 
@@ -128,17 +138,6 @@ class AnalysisService {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 30);
 
-        // let articleId;
-        // if (articleResult.rows.length > 0) {
-        //   articleId = articleResult.rows[0].id;
-        // } else {
-        //   const newArticle = await query(
-        //     'INSERT INTO articles (content, content_hash, scenario_id) VALUES ($1, $2, $3) RETURNING id',
-        //     [content, contentHash, scenarioId]
-        //   );
-        //   articleId = newArticle.rows[0].id;
-        // }
-
         // 获取情感ID
         const sentimentResult = await query(
           'SELECT id FROM sentiments WHERE code = $1',
@@ -148,9 +147,6 @@ class AnalysisService {
         if (sentimentResult.rows.length === 0) {
           throw new Error(`未找到情感类型: ${result.sentiment}`);
         }
-
-        // const expiresAt = new Date();
-        // expiresAt.setDate(expiresAt.getDate() + 30);
 
         // 确保confidence是一个有效的数字
         const confidence = parseFloat(result.confidence);
@@ -193,15 +189,18 @@ class AnalysisService {
   }
 
   _calculateOverallSentiment(analyses) {
-    const distribution = {
-      hasty: 0,
-      emotional: 0,
-      functional: 0
-    };
+    const distribution = {};
+
+    // 初始化所有情感类型的计数为0
+    if (analyses.length > 0 && analyses[0].confidenceDistribution) {
+      Object.keys(analyses[0].confidenceDistribution).forEach(type => {
+        distribution[type] = 0;
+      });
+    }
 
     analyses.forEach(analysis => {
       if (analysis && analysis.sentiment) {
-        distribution[analysis.sentiment]++;
+        distribution[analysis.sentiment] = (distribution[analysis.sentiment] || 0) + 1;
       }
     });
 
@@ -219,6 +218,15 @@ class AnalysisService {
   async getArticlesWithAnalysisResults(scenarioId, userId, page = 1, limit = 20) {
     try {
       await this._validateUserAccess(scenarioId, userId);
+
+      // 获取场景的情感类型
+      const scenarioSentiments = await scenarioService.getScenarioSentiments(scenarioId, userId);
+      
+      // 构建情感类型映射，用于翻译
+      const sentimentTranslations = {};
+      scenarioSentiments.forEach(s => {
+        sentimentTranslations[s.code] = s.nameZh;
+      });
 
       const offset = (page - 1) * limit;
 
@@ -276,6 +284,7 @@ class AnalysisService {
       const analysisResults = {
         totalArticles: total,
         sentimentDistribution: this._calculateOverallSentiment(result.rows),
+        sentimentTranslations,
         individualResults: result.rows.map(row => ({
           sentiment: row.sentiment,
           translatedSentiment: row.translated_sentiment,

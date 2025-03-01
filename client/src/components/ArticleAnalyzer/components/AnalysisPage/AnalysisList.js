@@ -8,7 +8,9 @@ const AnalysisList = ({ results, articles }) => {
       {results.individualResults.map((result, index) => (
         <AnalysisCard
           key={index}
-          result={result}
+          result={{...result, 
+            sentimentTranslations: results.sentimentTranslations || {}
+          }}
           article={typeof articles[index] === 'string' ? articles[index] : articles[index]?.text || ''}
           index={index + 1}
         />

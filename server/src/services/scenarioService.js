@@ -13,6 +13,16 @@ const transformScenario = (row) => ({
   count: row.count
 });
 
+// 转换情感类型数据
+const transformSentiment = (row) => ({
+  id: row.id,
+  code: row.code,
+  nameEn: row.name_en,
+  nameZh: row.name_zh,
+  description: row.description,
+  category: row.category
+});
+
 class ScenarioService {
   async createScenario(userId, data) {
     try {
@@ -150,6 +160,141 @@ class ScenarioService {
     } catch (error) {
       console.error('获取场景详情错误:', error);
       throw new Error('获取场景详情失败');
+    }
+  }
+
+  // 获取场景的情感类型
+  async getScenarioSentiments(scenarioId, userId) {
+    try {
+      // 首先验证用户对场景的访问权限
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('场景不存在或无权访问');
+      }
+
+      const result = await query(
+        `SELECT s.* 
+         FROM sentiments s
+         JOIN scenario_sentiments ss ON s.id = ss.sentiment_id
+         WHERE ss.scenario_id = $1
+         ORDER BY s.name_zh`,
+        [scenarioId]
+      );
+
+      return result.rows.map(transformSentiment);
+    } catch (error) {
+      console.error('获取场景情感类型失败:', error);
+      throw error;
+    }
+  }
+
+  // 添加情感类型到场景
+  async addSentimentToScenario(scenarioId, sentimentId, userId) {
+    try {
+      // 首先验证用户对场景的访问权限
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('场景不存在或无权访问');
+      }
+
+      // 验证情感类型是否存在
+      const sentimentCheck = await query(
+        `SELECT id FROM sentiments WHERE id = $1`,
+        [sentimentId]
+      );
+
+      if (sentimentCheck.rows.length === 0) {
+        throw new Error('情感类型不存在');
+      }
+
+      // 添加关联
+      await query(
+        `INSERT INTO scenario_sentiments (scenario_id, sentiment_id)
+         VALUES ($1, $2)
+         ON CONFLICT (scenario_id, sentiment_id) DO NOTHING`,
+        [scenarioId, sentimentId]
+      );
+
+      return { success: true };
+    } catch (error) {
+      console.error('添加情感类型到场景失败:', error);
+      throw error;
+    }
+  }
+
+  // 从场景中移除情感类型
+  async removeSentimentFromScenario(scenarioId, sentimentId, userId) {
+    try {
+      // 首先验证用户对场景的访问权限
+      const scenarioCheck = await query(
+        `SELECT id FROM scenarios WHERE id = $1 AND user_id = $2`,
+        [scenarioId, userId]
+      );
+
+      if (scenarioCheck.rows.length === 0) {
+        throw new Error('场景不存在或无权访问');
+      }
+
+      // 检查是否至少保留一种情感类型
+      const countResult = await query(
+        `SELECT COUNT(*) as count FROM scenario_sentiments WHERE scenario_id = $1`,
+        [scenarioId]
+      );
+      
+      if (parseInt(countResult.rows[0].count) <= 1) {
+        throw new Error('场景至少需要保留一种情感类型');
+      }
+
+      // 移除关联
+      await query(
+        `DELETE FROM scenario_sentiments 
+         WHERE scenario_id = $1 AND sentiment_id = $2`,
+        [scenarioId, sentimentId]
+      );
+
+      return { success: true };
+    } catch (error) {
+      console.error('从场景中移除情感类型失败:', error);
+      throw error;
+    }
+  }
+
+  // 获取所有可用的情感类型
+  async getAllSentiments() {
+    try {
+      const result = await query(
+        `SELECT * FROM sentiments ORDER BY name_zh`
+      );
+
+      return result.rows.map(transformSentiment);
+    } catch (error) {
+      console.error('获取所有情感类型失败:', error);
+      throw error;
+    }
+  }
+
+  // 创建新的情感类型
+  async createSentiment(data) {
+    try {
+      const result = await query(
+        `INSERT INTO sentiments (code, name_en, name_zh, description, category)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [data.code, data.nameEn, data.nameZh, data.description, data.category]
+      );
+
+      return transformSentiment(result.rows[0]);
+    } catch (error) {
+      console.error('创建情感类型失败:', error);
+      throw error;
     }
   }
 }

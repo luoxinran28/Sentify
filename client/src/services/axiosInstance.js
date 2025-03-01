@@ -1,11 +1,11 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
 
-// 根据环境确定 API URL，不需要添加 /api 前缀，因为所有路由都已包含
+// 根据环境确定 API URL
 const API_URL = process.env.REACT_APP_API_URL || (
   process.env.NODE_ENV === 'production'
-    ? ''  // 在生产环境中使用相对路径，因为所有路由都已包含 /api
-    : 'http://localhost:5010'
+    ? '/api'  // 在生产环境中使用相对路径，添加 /api 前缀
+    : 'http://localhost:5010/api'  // 开发环境添加 /api 前缀
 );
 
 // 加密函数

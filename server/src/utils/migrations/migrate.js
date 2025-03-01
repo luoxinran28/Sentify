@@ -53,6 +53,17 @@ const createTables = `
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- 创建场景情感类型关联表
+  CREATE TABLE IF NOT EXISTS scenario_sentiments (
+    id SERIAL PRIMARY KEY,
+    scenario_id INTEGER NOT NULL,
+    sentiment_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (sentiment_id) REFERENCES sentiments(id) ON DELETE CASCADE,
+    UNIQUE(scenario_id, sentiment_id)
+  );
+
   -- 创建分析结果表
   CREATE TABLE IF NOT EXISTS analysis_results (
     id SERIAL PRIMARY KEY,
@@ -85,8 +96,29 @@ const updateTables = `
   VALUES 
     ('hasty', 'Hasty', '敷衍', '回复简短，缺乏深度思考'),
     ('emotional', 'Emotional', '感性', '带有强烈的主观情感色彩'),
-    ('functional', 'Functional', '实用', '注重功能性描述和客观分析')
+    ('functional', 'Functional', '实用', '注重功能性描述和客观分析'),
+    ('smear', 'Smear', '抹黑', '与事实不符'),
+    ('quality', 'Quality', '质量', '产品及服务质量'),
+    ('environment', 'Environment', '环境', '产品使用环境的描述')
   ON CONFLICT (code) DO NOTHING;
+
+  -- 创建场景情感类型关联表（如果不存在）
+  CREATE TABLE IF NOT EXISTS scenario_sentiments (
+    id SERIAL PRIMARY KEY,
+    scenario_id INTEGER NOT NULL,
+    sentiment_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (sentiment_id) REFERENCES sentiments(id) ON DELETE CASCADE,
+    UNIQUE(scenario_id, sentiment_id)
+  );
+
+  -- 为现有场景添加默认情感类型关联
+  INSERT INTO scenario_sentiments (scenario_id, sentiment_id)
+  SELECT s.id, sen.id
+  FROM scenarios s, sentiments sen
+  WHERE sen.code IN ('hasty', 'emotional', 'functional')
+  ON CONFLICT (scenario_id, sentiment_id) DO NOTHING;
 
   -- 确保新列存在
   DO $$ 

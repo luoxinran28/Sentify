@@ -1,8 +1,9 @@
 const axios = require('axios');
 const databaseService = require('./database/databaseService');
+const scenarioService = require('./scenarioService');
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const MAX_ARTICLES = 20;
+const MAX_ARTICLES = 50;
 const MAX_ARTICLE_LENGTH = 1000;
 
 class DeepseekService {
@@ -20,6 +21,27 @@ class DeepseekService {
 
       // 从数据库获取场景的prompt
       const prompt = await databaseService.getScenarioPrompt(scenarioId, userId);
+      
+      // 获取场景的情感类型
+      const scenarioSentiments = await scenarioService.getScenarioSentiments(scenarioId, userId);
+      
+      // 如果没有情感类型，使用默认的三种
+      const sentimentCodes = scenarioSentiments.length > 0 
+        ? scenarioSentiments.map(s => s.code)
+        : ['hasty', 'emotional', 'functional'];
+      
+      // 构建情感类型映射，用于翻译
+      const sentimentTranslations = {};
+      scenarioSentiments.forEach(s => {
+        sentimentTranslations[s.code] = s.nameZh;
+      });
+      
+      // 如果没有自定义情感类型，使用默认翻译
+      if (Object.keys(sentimentTranslations).length === 0) {
+        sentimentTranslations.hasty = "敷衍";
+        sentimentTranslations.emotional = "感性";
+        sentimentTranslations.functional = "实用";
+      }
 
       const response = await axios.post(
         DEEPSEEK_API_URL,
@@ -32,7 +54,10 @@ class DeepseekService {
             },
             {
               role: "user",
-              content: JSON.stringify(articles)
+              content: JSON.stringify({
+                articles,
+                availableSentiments: sentimentCodes
+              })
             }
           ],
           temperature: 0.1,
@@ -61,7 +86,7 @@ class DeepseekService {
         console.error('API返回内容解析失败:', response.data.choices[0].message.content);
         throw new Error('API 返回数据格式错误');
       }
-      return this._validateAndFormatResponse(result);
+      return this._validateAndFormatResponse(result, sentimentCodes, sentimentTranslations);
     } catch (error) {
       if (error.code === 'ECONNABORTED') {
         throw new Error('分析超时，请减少文章数量或长度后重试');
@@ -70,7 +95,7 @@ class DeepseekService {
     }
   }
 
-  _validateAndFormatResponse(result) {
+  _validateAndFormatResponse(result, sentimentCodes, sentimentTranslations) {
     if (!result || !result.individualResults || !Array.isArray(result.individualResults)) {
         console.error('DeepSeek API 返回数据结构错误:', result);
         throw new Error('DeepSeek API 返回数据结构错误');
@@ -78,32 +103,36 @@ class DeepseekService {
 
     // 格式化每个分析结果
     const analyses = result.individualResults.map(analysis => {
-      // 验证必要字段
-      if (!analysis.sentiment || !analysis.confidence || !analysis.translation) {
-        throw new Error('API 返回的分析结果缺少必要字段');
+      
+      // 确保返回的情感类型在允许的范围内
+      if (!sentimentCodes.includes(analysis.sentiment)) {
+        console.warn(`API返回了未知的情感类型: ${analysis.sentiment}，使用默认类型: ${sentimentCodes[0]}`);
+        analysis.sentiment = sentimentCodes[0];
       }
+
+      // 构建置信度分布对象
+      const confidenceDistribution = {};
+      sentimentCodes.forEach(code => {
+        confidenceDistribution[code] = parseFloat(analysis.confidenceDistribution?.[code]) || 0;
+      });
+      
+      // 构建高亮对象
+      const highlights = {};
+      const translatedHighlights = {};
+      sentimentCodes.forEach(code => {
+        highlights[code] = Array.isArray(analysis.highlights?.[code]) ? analysis.highlights[code] : [];
+        translatedHighlights[code] = Array.isArray(analysis.translatedHighlights?.[code]) ? analysis.translatedHighlights[code] : [];
+      });
 
       // 确保数据格式正确
       return {
-        sentiment: analysis.sentiment || 'hasty',
-        translatedSentiment: analysis.translatedSentiment || '敷衍',
+        sentiment: analysis.sentiment || sentimentCodes[0],
+        translatedSentiment: sentimentTranslations[analysis.sentiment] || analysis.translatedSentiment || '未知',
         confidence: parseFloat(analysis.confidence) || 0,
-        confidenceDistribution: {
-          hasty: parseFloat(analysis.confidenceDistribution?.hasty) || 0,
-          emotional: parseFloat(analysis.confidenceDistribution?.emotional) || 0,
-          functional: parseFloat(analysis.confidenceDistribution?.functional) || 0
-        },
+        confidenceDistribution,
         translation: analysis.translation || '',
-        highlights: {
-          hasty: Array.isArray(analysis.highlights?.hasty) ? analysis.highlights.hasty : [],
-          emotional: Array.isArray(analysis.highlights?.emotional) ? analysis.highlights.emotional : [],
-          functional: Array.isArray(analysis.highlights?.functional) ? analysis.highlights.functional : []
-        },
-        translatedHighlights: {
-          hasty: Array.isArray(analysis.translatedHighlights?.hasty) ? analysis.translatedHighlights.hasty : [],
-          emotional: Array.isArray(analysis.translatedHighlights?.emotional) ? analysis.translatedHighlights.emotional : [],
-          functional: Array.isArray(analysis.translatedHighlights?.functional) ? analysis.translatedHighlights.functional : []
-        },
+        highlights,
+        translatedHighlights,
         reasoning: analysis.reasoning || '暂无推理过程',
         brief: analysis.brief || '暂无总结',
         replySuggestion: analysis.replySuggestion || '暂无回复建议'
@@ -111,27 +140,23 @@ class DeepseekService {
     });
 
     // 统计每种情感类型的出现次数
-    // 使用reduce方法遍历分析结果数组
-    // acc为累加器对象,初始值包含三种情感类型且计数都为0
-    // 每次遍历一个analysis时,将对应情感类型的计数加1
     const overallSentiment = analyses.reduce((acc, analysis) => {
       acc[analysis.sentiment] = (acc[analysis.sentiment] || 0) + 1;
       return acc;
-    }, {
-      hasty: 0,      // 敷衍型情感计数
-      emotional: 0,   // 感性型情感计数
-      functional: 0   // 实用型情感计数
+    }, {});
+    
+    // 确保所有情感类型都有计数，即使是0
+    sentimentCodes.forEach(code => {
+      if (overallSentiment[code] === undefined) {
+        overallSentiment[code] = 0;
+      }
     });
 
     return {
       analyses,
       overallSentiment,
       resultsAttributes: {
-        sentimentTranslation: {
-          hasty: "敷衍",
-          emotional: "感性", 
-          functional: "实用"
-        }
+        sentimentTranslation: sentimentTranslations
       }
     };
   }
@@ -143,15 +168,18 @@ class DeepseekService {
   }
 
   _calculateOverallSentiment(analyses) {
-    const distribution = {
-      hasty: 0,
-      emotional: 0,
-      functional: 0
-    };
+    const distribution = {};
+    
+    // 初始化所有情感类型的计数为0
+    if (analyses.length > 0 && analyses[0].confidenceDistribution) {
+      Object.keys(analyses[0].confidenceDistribution).forEach(type => {
+        distribution[type] = 0;
+      });
+    }
 
     analyses.forEach(analysis => {
       if (analysis.sentiment) {
-        distribution[analysis.sentiment]++;
+        distribution[analysis.sentiment] = (distribution[analysis.sentiment] || 0) + 1;
       }
     });
 

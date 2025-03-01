@@ -247,10 +247,10 @@ const ArticleList = () => {
         return;
       }
 
-      if (articles.length > 20) {
+      if (articles.length > 50) {
         setSnackbar({
           open: true,
-          message: '一次最多只能导入20条内容，请减少Excel中的数量',
+          message: '一次最多只能导入50条内容，请减少Excel中的数量',
           severity: 'error'
         });
         return;
@@ -268,10 +268,10 @@ const ArticleList = () => {
 
       setArticles(prevArticles => {
         const newArticles = articles.map(text => ({ text }));
-        if (prevArticles.length + newArticles.length > 20) {
+        if (prevArticles.length + newArticles.length > 50) {
           setSnackbar({
             open: true,
-            message: '内容总数不能超过20条，请先清空一些现有内容',
+            message: '内容总数不能超过50条，请先清空一些现有内容',
             severity: 'error'
           });
           return prevArticles;

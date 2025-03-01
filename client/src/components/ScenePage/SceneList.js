@@ -8,7 +8,9 @@ import {
   CircularProgress,
   Box,
   Typography,
-  Button
+  Button,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { scenarioService } from '../../services/scenarioService';
@@ -19,6 +21,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import InfiniteScroll from '../common/InfiniteScroll';
 import EditSceneDialog from './Dialogs/EditSceneDialog';
 import DeleteConfirmDialog from './Dialogs/DeleteConfirmDialog';
+import axiosInstance from '../../services/axiosInstance';
 
 
 function SceneList({ onLogout }) {
@@ -32,6 +35,11 @@ function SceneList({ onLogout }) {
   const [editingScene, setEditingScene] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
   
   const theme = useTheme();
   const navigate = useNavigate();
@@ -81,15 +89,43 @@ function SceneList({ onLogout }) {
     navigate(`/article-analyzer/${scene.id}`, { state: { scene } });
   };
 
-  const handleAddScene = async (data) => {
+  const handleAddScene = async (newScene) => {
+    setLoading(true);
     try {
-      const newScenario = await scenarioService.createScenario(data);
-      setOpenAddDialog(false);
-      // 直接更新状态，避免重新请求
-      setScenarios(prev => [newScenario, ...prev]);
+      // 创建新场景
+      const response = await axiosInstance.post('/scenarios', {
+        titleEn: newScene.titleEn,
+        titleZh: newScene.titleZh,
+        source: newScene.source,
+        prompt: newScene.prompt
+      });
+
+      if (response.data) {
+        const scenarioId = response.data.id;
+        
+        // 添加情感类型关联
+        for (const sentimentId of newScene.sentiments) {
+          await axiosInstance.post(`/scenarios/${scenarioId}/sentiments/${sentimentId}`);
+        }
+
+        // 更新场景列表
+        loadScenarios(1, new AbortController().signal);
+        setOpenAddDialog(false);
+        setSnackbar({
+          open: true,
+          message: '场景创建成功',
+          severity: 'success'
+        });
+      }
     } catch (error) {
       console.error('创建场景失败:', error);
-      setError(error.response?.data?.message || '创建场景失败');
+      setSnackbar({
+        open: true,
+        message: `创建场景失败: ${error.response?.data?.message || error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -105,29 +141,60 @@ function SceneList({ onLogout }) {
     setEditingScene(scene);
   };
 
-  const handleSaveScene = async (formData) => {
+  const handleSaveScene = async (updatedScene) => {
+    setLoading(true);
     try {
-      const updatedScene = await scenarioService.updateScenario(editingScene.id, {
-        ...formData,
-        titleZh: formData.titleZh,
+      // 更新场景基本信息
+      const response = await axiosInstance.put(`/scenarios/${updatedScene.id}`, {
+        titleEn: updatedScene.titleEn,
+        titleZh: updatedScene.titleZh,
+        source: updatedScene.source,
+        prompt: updatedScene.prompt
       });
-      
-      // 更新本地状态，保持数据结构一致
-      setScenarios(prev => prev.map(s => 
-        s.id === updatedScene.id ? {
-          ...s,
-          titleEn: updatedScene.titleEn,
-          titleZh: updatedScene.titleZh,
-          source: updatedScene.source,
-          prompt: updatedScene.prompt,
-          updatedAt: updatedScene.updatedAt,
-          hasLink: true  // 保持链接可点击
-        } : s
-      ));
-      
-      setEditingScene(null);
+
+      if (response.data) {
+        // 获取当前场景的情感类型
+        const currentSentimentsResponse = await axiosInstance.get(`/scenarios/${updatedScene.id}/sentiments`);
+        const currentSentiments = currentSentimentsResponse.data;
+        
+        // 找出需要添加的情感类型
+        const sentimentsToAdd = updatedScene.sentiments.filter(
+          id => !currentSentiments.some(s => s.id === id)
+        );
+        
+        // 找出需要删除的情感类型
+        const sentimentsToRemove = currentSentiments.filter(
+          s => !updatedScene.sentiments.includes(s.id)
+        );
+        
+        // 添加新的情感类型
+        for (const sentimentId of sentimentsToAdd) {
+          await axiosInstance.post(`/scenarios/${updatedScene.id}/sentiments/${sentimentId}`);
+        }
+        
+        // 删除不需要的情感类型
+        for (const sentiment of sentimentsToRemove) {
+          await axiosInstance.delete(`/scenarios/${updatedScene.id}/sentiments/${sentiment.id}`);
+        }
+
+        // 更新场景列表
+        loadScenarios(1, new AbortController().signal);
+        setEditingScene(null);
+        setSnackbar({
+          open: true,
+          message: '场景更新成功',
+          severity: 'success'
+        });
+      }
     } catch (error) {
       console.error('更新场景失败:', error);
+      setSnackbar({
+        open: true,
+        message: `更新场景失败: ${error.response?.data?.message || error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -201,6 +268,11 @@ function SceneList({ onLogout }) {
     </Container>
   );
 
+  // Snackbar 关闭处理函数
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   return (
     <>
       <SceneHeader 
@@ -228,6 +300,15 @@ function SceneList({ onLogout }) {
         onConfirm={handleConfirmDelete}
         sceneName={sceneToDelete?.titleZh}
       />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 }
