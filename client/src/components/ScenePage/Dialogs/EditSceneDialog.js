@@ -209,14 +209,14 @@ const EditSceneDialog = ({
               helperText={errors.source}
               required
             />
-            <StyledTextField
+            {/* <StyledTextField
               label="Prompt"
               fullWidth
               multiline
               rows={4}
               value={formData.prompt}
               onChange={handleChange('prompt')}
-            />
+            /> */}
             
             <FormControl fullWidth error={!!errors.sentiments} sx={{ mt: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
